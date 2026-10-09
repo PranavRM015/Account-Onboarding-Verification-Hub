@@ -28,32 +28,33 @@
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| ticketId | int | Identity(1,1), Primary key |
-| customerId | int | Not null, Foreign key references CustomerInfo |
-| status | varchar(20) | Not null, default Submitted. Can be one of the following: Submitted, FormatCheck, PendingVerification, Review, Restricted, Approved, Denied |
+| ticketId | int | Not null, Identity(1,1), Primary key |
+| customerId | int | Not null, Foreign key references Customer |
+| status | varchar(20) | Not null, default Submitted. Can be one of the following: Submitted, FormatVerification, Review, Approved, Rejected |
 | accountType | varchar(15) | Not null, can be one of the following: Individual, Joint |
 | riskRating | varchar(6) | Can be one of the following: Low, Medium, High. Null until scored |
 | createdAt | datetime2 | Not null |
 | verificationDeadline | datetime2 | Not null, createdAt + 60 days |
-| assignedTo | nvarchar(450) | Foreign key references AspNetUsers |
+| assignedTo | nvarchar(450) |  |
 
-**CustomerInfo**
+**Customer**
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| customerId | int | Identity(1,1), Primary key |
+| customerId | int | Not null, Identity(1,1), Primary key |
 | firstName | nvarchar(50) | Not null |
 | middleName | nvarchar(50) | |
 | lastName | nvarchar(50) | Not null |
 | dateOfBirth | date | Not null |
+| gender | varchar(6) | Not null, can be one of the following: Male, Female, Other |
 | taxIdType | varchar(4) | Not null, can be one of the following: SSN, ITIN, EIN |
 | taxIdHash | binary(32) | Not null, used to look up duplicates without storing the full number |
-| taxIdLast4 | char(4) | Not null, used for display only |
+| taxIdLastFourDigits | char(4) | Not null, used for display only |
 | residentialAddress | nvarchar(200) | Not null |
 | countryOfResidence | char(2) | Not null, ISO country code |
 | countryOfCitizenship | char(2) | Not null, ISO country code |
 | occupation | nvarchar(100) | Not null |
-| employer | nvarchar(100) | |
+| employer | nvarchar(100) | Not null |
 
 **VendorResponse**
 
@@ -61,35 +62,35 @@
 |---|---|---|
 | vendorResponseId | int | Identity(1,1), Primary key |
 | ticketId | int | Not null, Foreign key references Ticket |
-| nameMatch | varchar(7) | Can be one of the following: Match, Partial, NoMatch |
-| dateOfBirthMatch | varchar(7) | Can be one of the following: Match, Partial, NoMatch |
-| addressMatch | varchar(7) | Can be one of the following: Match, Partial, NoMatch |
-| taxIdMatch | varchar(7) | Can be one of the following: Match, Partial, NoMatch |
+| nameMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
+| dateOfBirthMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
+| addressMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
+| taxIdMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
 | score | int | Not null, between 0 and 50 |
-| riskCodes | nvarchar(200) | ex. DeceasedSSN, CorrectionalAddress |
+| riskCodes | nvarchar(200) | Not null, ex. DeceasedSSN, CorrectionalAddress |
 | timeStamp | datetime2 | Not null |
 
 **Flag**
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| flagId | int | Identity(1,1), Primary key |
+| flagId | int | Identity(1,1), Primary key, Not null |
 | ticketId | int | Not null, Foreign key references Ticket |
 | violationType | varchar(30) | Not null, can be one of the following: VerificationFailed, OfacMatch, ProhibitedIndustry, ClosedJurisdiction |
 | raisedBy | nvarchar(450) | Foreign key references AspNetUsers. Null when raised by the system |
 | raisedAt | datetime2 | Not null |
-| clearedBy | nvarchar(450) | Foreign key references AspNetUsers |
-| clearedAt | datetime2 | |
+| clearedBy | nvarchar(450) |  |
+| clearedAt | datetime2 | Not null |
 | clearedReason | nvarchar(500) | Required when the flag is cleared |
 
 **Decision**
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| decisionId | int | Identity(1,1), Primary key |
+| decisionId | int | Identity(1,1), Primary key, Not null |
 | ticketId | int | Not null, Foreign key references Ticket |
 | decisionType | varchar(20) | Not null, can be one of the following: Approve, SecondApproval, Restrict, Deny |
-| decidedBy | nvarchar(450) | Not null, Foreign key references AspNetUsers |
+| decidedBy | nvarchar(450) | Not null |
 | reason | nvarchar(1000) | Not null |
 | decidedAt | datetime2 | Not null |
 
@@ -99,18 +100,18 @@
 |---|---|---|
 | recId | int | Identity(1,1), Primary key |
 | ticketId | int | Not null, Foreign key references Ticket |
-| userId | nvarchar(450) | Foreign key references AspNetUsers. Null when the action was done by the system |
-| oldStatus | varchar(20) | |
-| newStatus | varchar(20) | |
-| message | nvarchar(500) | Not null |
-| reason | nvarchar(500) | |
+| userId | nvarchar(450) | Not null |
+| prevStatus | varchar(20) | Not null |
+| currStatus | varchar(20) | Not null |
+| message | nvarchar(250) | Not null |
+| reason | nvarchar(500) | Not null |
 | dateTimeOccurred | datetime2 | Not null |
 
 Rows in AuditTrail will never be updated or deleted.
 
 **Stages:**
 
-Submitted, FormatCheck, PendingVerification, Review, Restricted, Approved, Denied
+Submitted, FormatVerification, Review, Approved, Rejected
 
 **Rules:**
 
@@ -121,7 +122,7 @@ Submitted, FormatCheck, PendingVerification, Review, Restricted, Approved, Denie
 - Accounts based in Mexico are in the open tier and will be accepted. Maintain tier countries (Canada is used as an example) will only be accepted for existing customers, while everything else will be in the closed tier. This rule is applied to the customer's country of residence.
 - A ticket cannot be approved until every flag on it has been cleared.
 - High risk tickets will need a second approval from a different reviewer than the one who gave the first approval.
-- If a ticket is not resolved within 60 days, it will be moved to Restricted, then Denied.
+- If a ticket is not resolved within 60 days, it will be moved to Rejected.
 
 How the risk rating is calculated has not been determined yet.
 
