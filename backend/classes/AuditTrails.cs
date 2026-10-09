@@ -57,6 +57,10 @@ namespace AuditTrails
                 t.HasCheckConstraint("CK_AuditCurrStatus",
                     "currStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
             });
+            builder.HasOne(x => x.ticket)
+            .WithMany()
+            .HasForeignKey(x => x.ticketId)
+            .OnDelete(DeleteBehavior.Restrict);
         }
     }
 

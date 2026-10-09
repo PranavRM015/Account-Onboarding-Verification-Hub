@@ -10,7 +10,7 @@ namespace Decisions
 {
     public static class DecisionValues
     {
-        public static readonly string[] DecisionTypes = { "Approve", "SecondApproval", "Restrict", "Deny" };
+        public static readonly string[] DecisionTypes = { "Approve", "Deny" };
     }
 
     public class Decision
@@ -49,10 +49,15 @@ namespace Decisions
             builder.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_DecisionType",
-                    "decisionType IN ('Approve', 'SecondApproval', 'Restrict', 'Deny')");
+                    "decisionType IN ('Approve', 'Deny')");
                 t.HasCheckConstraint("CK_DecisionReason",
                     "reason IS NOT NULL AND LEN(reason) > 0");
             });
+            builder.HasOne(x => x.ticket)
+            .WithMany()
+            .HasForeignKey(x => x.ticketId)
+            .OnDelete(DeleteBehavior.Restrict);
+
         }
     }
 
@@ -64,7 +69,7 @@ namespace Decisions
 
             RuleFor(x => x.decisionType).NotEmpty()
                 .Must(v => DecisionValues.DecisionTypes.Contains(v))
-                .WithMessage("Decision type must be Approve, SecondApproval, Restrict, or Deny.");
+                .WithMessage("Decision type must be Approve, or Deny.");
 
             RuleFor(x => x.decidedBy).NotEmpty().MaximumLength(450);
 

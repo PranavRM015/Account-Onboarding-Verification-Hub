@@ -5,6 +5,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Customers;
+
 namespace Tickets
 {
     public static class TicketValues
@@ -61,6 +62,10 @@ namespace Tickets
                     "verificationDeadline = DATEADD(DAY, 60, createdAt)");
             });
             builder.Property(x => x.status).HasDefaultValue("Submitted");
+            builder.HasOne(t => t.customer)
+                .WithMany()
+                .HasForeignKey(t => t.customerId)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
     public class TicketValidator : AbstractValidator<Ticket>

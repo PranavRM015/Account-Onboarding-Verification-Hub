@@ -89,7 +89,7 @@
 |---|---|---|
 | decisionId | int | Identity(1,1), Primary key, Not null |
 | ticketId | int | Not null, Foreign key references Ticket |
-| decisionType | varchar(20) | Not null, can be one of the following: Approve, SecondApproval, Restrict, Deny |
+| decisionType | varchar(20) | Not null, can be one of the following: Approve, Deny |
 | decidedBy | nvarchar(450) | Not null |
 | reason | nvarchar(1000) | Not null |
 | decidedAt | datetime2 | Not null |

@@ -49,6 +49,10 @@ namespace Flags
                 t.HasCheckConstraint("CK_ViolationType","violationType IN ('VerificationFailed', 'OfacMatch', 'ProhibitedIndustry', 'ClosedJurisdiction')");
                 t.HasCheckConstraint("CK_ClearedReason","clearedAt IS NULL OR (clearedBy IS NOT NULL AND clearedReason IS NOT NULL AND LEN(clearedReason) > 0)");
             });
+            builder.HasOne(x => x.ticket)
+            .WithMany()
+            .HasForeignKey(x => x.ticketId)
+            .OnDelete(DeleteBehavior.Restrict);
         }
     }
 

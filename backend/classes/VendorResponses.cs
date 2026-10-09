@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Tickets;
 
-namespace VendorResponse
+namespace VendorResponses
 {
     public static class VendorResponseValues
     {
@@ -61,6 +61,10 @@ namespace VendorResponse
                 t.HasCheckConstraint("CK_TaxIdMatch", "taxIdMatch IN ('Match', 'Partial', 'NoMatch')");
                 t.HasCheckConstraint("CK_Score", "score BETWEEN 0 AND 50");
             });
+            builder.HasOne(x => x.ticket)
+            .WithMany()
+            .HasForeignKey(x => x.ticketId)
+            .OnDelete(DeleteBehavior.Restrict);
         }
     }
 
