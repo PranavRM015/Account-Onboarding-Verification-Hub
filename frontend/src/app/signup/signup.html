@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signup</title>
+    <link rel="stylesheet" href="../../styles.css">
+    <link rel="signup-stylesheet" href="signup.css">
+</head>
+<body>
+    <form novalidate>
+        <div class="my-box">
+        <div class="fields">
+        <h1>Sign up as a new user</h1>
+        <label for="Username">Username:</label>
+        <input type="text" id="Username" name="Username" placeholder="Enter your username" required>
+        </div>
+        
+        <div class="password-container fields">
+        <label for="Password">Password:</label>
+        <input type="password" id="Password" name="Password"
+        placeholder="Enter your password" 
+        (focus)="showModal()"
+        (blur)="hideModal()"
+        required>
+
+        
+        <div id="myModal" class="modal" [class.show]="isModalVisible">
+        <div class="modal-content">
+            <ul class="modal-text">
+                <li><strong>Password must be:</strong></li>
+                <li>at least 8 characters long</li>
+                <li>have at least one uppercase letter</li>
+                <li>have at least one lowercase letter</li>
+                <li>have at least one number</li>
+                <li>have at least one special character</li>
+            </ul>
+        </div>
+        </div>
+        </div>
+        <button type="submit" (click)="acceptAdminCredentials(username, password)">Sign up</button>
+        </div>
+    </form>
+</body>
+</html>
