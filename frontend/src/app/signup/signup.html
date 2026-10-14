@@ -8,21 +8,23 @@
     <link rel="signup-stylesheet" href="signup.css">
 </head>
 <body>
-    <form novalidate>
+    <form (ngSubmit)="acceptAdminCredentials(username.value, password)" novalidate>
         <div class="my-box">
         <div class="fields">
         <h1>Sign up as a new user</h1>
         <label for="Username">Username:</label>
-        <input type="text" id="Username" name="Username" placeholder="Enter your username" required>
+        <input type="text" id="Username" name="Username" [formControl]="username" placeholder="Enter your username" required>
         </div>
         
         <div class="password-container fields">
         <label for="Password">Password:</label>
         <input type="password" id="Password" name="Password"
         placeholder="Enter your password" 
+        [(ngModel)]="password" 
         (focus)="showModal()"
         (blur)="hideModal()"
-        required>
+        required
+        />
 
         
         <div id="myModal" class="modal" [class.show]="isModalVisible">
@@ -38,7 +40,7 @@
         </div>
         </div>
         </div>
-        <button type="submit" (click)="acceptAdminCredentials(username, password)">Sign up</button>
+        <button type="submit">Sign up</button>
         </div>
     </form>
 </body>

@@ -16,36 +16,36 @@ namespace VendorResponses
     public class VendorResponse
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        public int vendorResponseId { get; set; }
+        public int VendorResponseId { get; set; }
         [Range(1, int.MaxValue, ErrorMessage = "Ticket ID must be positive.")]
-        public int ticketId { get; set; }
-        [ForeignKey(nameof(ticketId))]
-        public Ticket ticket { get; set; } = null!;
+        public int TicketId { get; set; }
+        [ForeignKey(nameof(TicketId))]
+        public Ticket Ticket { get; set; } = null!;
         [MaxLength(7), Column(TypeName = "varchar(7)")]
-        public string nameMatch { get; set; } = string.Empty;
+        public string NameMatch { get; set; } = string.Empty;
         [MaxLength(7), Column(TypeName = "varchar(7)")]
-        public string dateOfBirthMatch { get; set; } = string.Empty;
+        public string DateOfBirthMatch { get; set; } = string.Empty;
         [MaxLength(7), Column(TypeName = "varchar(7)")]
-        public string addressMatch { get; set; } = string.Empty;
+        public string AddressMatch { get; set; } = string.Empty;
         [MaxLength(7), Column(TypeName = "varchar(7)")]
-        public string taxIdMatch { get; set; } = string.Empty;
+        public string TaxIdMatch { get; set; } = string.Empty;
         [Range(0, 50)]
-        public int score { get; set; }
+        public int Score { get; set; }
         [MaxLength(200)]
-        public string riskCodes { get; set; } = string.Empty; // ex. DeceasedSSN, CorrectionalAddress
-        public DateTime timeStamp { get; set; }
+        public string RiskCodes { get; set; } = string.Empty; // ex. DeceasedSSN, CorrectionalAddress
+        public DateTime TimeStamp { get; set; }
         private VendorResponse() { } // Used by EF Core for materialization
 
         public VendorResponse(int ticketId, string nameMatch, string dateOfBirthMatch, string addressMatch, string taxIdMatch, int score, string riskCodes)
         {
-            this.ticketId = ticketId;
-            this.nameMatch = nameMatch;
-            this.dateOfBirthMatch = dateOfBirthMatch;
-            this.addressMatch = addressMatch;
-            this.taxIdMatch = taxIdMatch;
-            this.score = score;
-            this.riskCodes = riskCodes;
-            this.timeStamp = DateTime.UtcNow;
+            this.TicketId = ticketId;
+            this.NameMatch = nameMatch;
+            this.DateOfBirthMatch = dateOfBirthMatch;
+            this.AddressMatch = addressMatch;
+            this.TaxIdMatch = taxIdMatch;
+            this.Score = score;
+            this.RiskCodes = riskCodes;
+            this.TimeStamp = DateTime.UtcNow;
         }
     }
 
@@ -55,15 +55,15 @@ namespace VendorResponses
         {
             builder.ToTable(t =>
             {
-                t.HasCheckConstraint("CK_NameMatch", "nameMatch IN ('Match', 'Partial', 'NoMatch')");
-                t.HasCheckConstraint("CK_DateOfBirthMatch", "dateOfBirthMatch IN ('Match', 'Partial', 'NoMatch')");
-                t.HasCheckConstraint("CK_AddressMatch", "addressMatch IN ('Match', 'Partial', 'NoMatch')");
-                t.HasCheckConstraint("CK_TaxIdMatch", "taxIdMatch IN ('Match', 'Partial', 'NoMatch')");
-                t.HasCheckConstraint("CK_Score", "score BETWEEN 0 AND 50");
+                t.HasCheckConstraint("CK_NameMatch", "NameMatch IN ('Match', 'Partial', 'NoMatch')");
+                t.HasCheckConstraint("CK_DateOfBirthMatch", "DateOfBirthMatch IN ('Match', 'Partial', 'NoMatch')");
+                t.HasCheckConstraint("CK_AddressMatch", "AddressMatch IN ('Match', 'Partial', 'NoMatch')");
+                t.HasCheckConstraint("CK_TaxIdMatch", "TaxIdMatch IN ('Match', 'Partial', 'NoMatch')");
+                t.HasCheckConstraint("CK_Score", "Score BETWEEN 0 AND 50");
             });
-            builder.HasOne(x => x.ticket)
+            builder.HasOne(x => x.Ticket)
             .WithMany()
-            .HasForeignKey(x => x.ticketId)
+            .HasForeignKey(x => x.TicketId)
             .OnDelete(DeleteBehavior.Restrict);
         }
     }
@@ -72,25 +72,25 @@ namespace VendorResponses
     {
         public VendorResponseValidator()
         {
-            RuleFor(x => x.ticketId).GreaterThan(0);
-            RuleFor(x => x.nameMatch).NotEmpty()
+            RuleFor(x => x.TicketId).GreaterThan(0);
+            RuleFor(x => x.NameMatch).NotEmpty()
                 .Must(v => VendorResponseValues.MatchResults.Contains(v))
                 .WithMessage("Name match must be Match, Partial, or NoMatch.");
 
-            RuleFor(x => x.dateOfBirthMatch).NotEmpty()
+            RuleFor(x => x.DateOfBirthMatch).NotEmpty()
                 .Must(v => VendorResponseValues.MatchResults.Contains(v))
                 .WithMessage("Date of birth match must be Match, Partial, or NoMatch.");
 
-            RuleFor(x => x.addressMatch).NotEmpty()
+            RuleFor(x => x.AddressMatch).NotEmpty()
                 .Must(v => VendorResponseValues.MatchResults.Contains(v))
                 .WithMessage("Address match must be Match, Partial, or NoMatch.");
 
-            RuleFor(x => x.taxIdMatch).NotEmpty()
+            RuleFor(x => x.TaxIdMatch).NotEmpty()
                 .Must(v => VendorResponseValues.MatchResults.Contains(v))
                 .WithMessage("Tax ID match must be Match, Partial, or NoMatch.");
 
-            RuleFor(x => x.score).InclusiveBetween(0, 50);
-            RuleFor(x => x.riskCodes).NotNull().MaximumLength(200);
+            RuleFor(x => x.Score).InclusiveBetween(0, 50);
+            RuleFor(x => x.RiskCodes).NotNull().MaximumLength(200);
         }
     }
 }

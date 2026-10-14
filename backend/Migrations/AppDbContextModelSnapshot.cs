@@ -22,394 +22,481 @@ namespace backend.Api.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("AuditTrails.AuditTrail", b =>
+            modelBuilder.Entity("Admins.Admin", b =>
                 {
-                    b.Property<int>("recId")
+                    b.Property<int>("AdminId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("recId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("AdminId"));
 
-                    b.Property<string>("currStatus")
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("AdminId");
+
+                    b.ToTable("Admins");
+                });
+
+            modelBuilder.Entity("AuditTrails.AuditTrail", b =>
+                {
+                    b.Property<int>("RecId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RecId"));
+
+                    b.Property<string>("CurrStatus")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
-                    b.Property<DateTime>("dateTimeOccurred")
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("DateTimeOccurred")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("message")
+                    b.Property<string>("Message")
                         .IsRequired()
                         .HasMaxLength(250)
                         .HasColumnType("nvarchar(250)");
 
-                    b.Property<string>("prevStatus")
+                    b.Property<string>("PrevStatus")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
-                    b.Property<string>("reason")
+                    b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<int>("ticketId")
+                    b.Property<int>("TicketId")
                         .HasColumnType("int");
 
-                    b.Property<string>("userId")
-                        .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.HasKey("RecId");
 
-                    b.HasKey("recId");
+                    b.HasIndex("CustomerId");
 
-                    b.HasIndex("ticketId");
+                    b.HasIndex("TicketId");
 
-                    b.ToTable("AuditTrails", null, t =>
+                    b.ToTable("AuditTrails", t =>
                         {
-                            t.HasCheckConstraint("CK_AuditCurrStatus", "currStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                            t.HasCheckConstraint("CK_AuditCurrStatus", "CurrStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
 
-                            t.HasCheckConstraint("CK_AuditPrevStatus", "prevStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                            t.HasCheckConstraint("CK_AuditPrevStatus", "PrevStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
                         });
                 });
 
             modelBuilder.Entity("Customers.Customer", b =>
                 {
-                    b.Property<int>("customerId")
+                    b.Property<int>("CustomerId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("customerId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("CustomerId"));
 
-                    b.Property<string>("countryOfCitizenship")
+                    b.Property<string>("CountryOfCitizenship")
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("char(2)");
 
-                    b.Property<string>("countryOfResidence")
+                    b.Property<string>("CountryOfResidence")
                         .IsRequired()
                         .HasMaxLength(2)
                         .HasColumnType("char(2)");
 
-                    b.Property<DateTime>("dateOfBirth")
+                    b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("date");
 
-                    b.Property<string>("employer")
+                    b.Property<string>("Employer")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("firstName")
+                    b.Property<string>("FirstName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("gender")
+                    b.Property<string>("Gender")
                         .IsRequired()
                         .HasMaxLength(6)
                         .HasColumnType("varchar(6)");
 
-                    b.Property<string>("lastName")
+                    b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("middleName")
+                    b.Property<string>("MiddleName")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<string>("occupation")
+                    b.Property<string>("Occupation")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("residentialAddress")
+                    b.Property<string>("ResidentialAddress")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<byte[]>("taxIdHash")
+                    b.Property<byte[]>("TaxIdHash")
                         .IsRequired()
                         .HasMaxLength(32)
                         .HasColumnType("binary(32)");
 
-                    b.Property<string>("taxIdLastFourDigits")
+                    b.Property<string>("TaxIdLastFourDigits")
                         .IsRequired()
                         .HasMaxLength(4)
                         .HasColumnType("char(4)");
 
-                    b.Property<string>("taxIdType")
+                    b.Property<string>("TaxIdType")
                         .IsRequired()
                         .HasMaxLength(4)
                         .HasColumnType("varchar(4)");
 
-                    b.HasKey("customerId");
+                    b.HasKey("CustomerId");
 
-                    b.ToTable("Customers", null, t =>
+                    b.HasIndex("TaxIdHash")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Customers_TaxIdHash");
+
+                    b.ToTable("Customers", t =>
                         {
-                            t.HasCheckConstraint("CK_Gender", "gender IN ('Male', 'Female', 'Other')");
+                            t.HasCheckConstraint("CK_Gender", "Gender IN ('Male', 'Female', 'Other')");
 
-                            t.HasCheckConstraint("CK_ResidentialAddress", "LEN(residentialAddress) > 0");
+                            t.HasCheckConstraint("CK_ResidentialAddress", "LEN(ResidentialAddress) > 0");
 
-                            t.HasCheckConstraint("CK_TaxIdLastFourDigits", "LEN(taxIdLastFourDigits) = 4");
+                            t.HasCheckConstraint("CK_TaxIdLastFourDigits", "LEN(TaxIdLastFourDigits) = 4");
 
-                            t.HasCheckConstraint("CK_TaxIdType", "taxIdType IN ('SSN', 'ITIN', 'EIN')");
+                            t.HasCheckConstraint("CK_TaxIdType", "TaxIdType IN ('SSN', 'ITIN', 'EIN')");
                         });
                 });
 
             modelBuilder.Entity("Decisions.Decision", b =>
                 {
-                    b.Property<int>("decisionId")
+                    b.Property<int>("DecisionId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("decisionId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("DecisionId"));
 
-                    b.Property<DateTime>("decidedAt")
+                    b.Property<DateTime>("DecidedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("decidedBy")
+                    b.Property<string>("DecidedBy")
                         .IsRequired()
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("decisionType")
+                    b.Property<string>("DecisionType")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)");
 
-                    b.Property<string>("reason")
+                    b.Property<string>("Reason")
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
 
-                    b.Property<int>("ticketId")
+                    b.Property<int>("TicketId")
                         .HasColumnType("int");
 
-                    b.HasKey("decisionId");
+                    b.HasKey("DecisionId");
 
-                    b.HasIndex("ticketId");
+                    b.HasIndex("DecidedBy");
 
-                    b.ToTable("Decisions", null, t =>
+                    b.HasIndex("TicketId")
+                        .IsUnique();
+
+                    b.ToTable("Decisions", t =>
                         {
-                            t.HasCheckConstraint("CK_DecisionReason", "reason IS NOT NULL AND LEN(reason) > 0");
+                            t.HasCheckConstraint("CK_DecisionReason", "Reason IS NOT NULL AND LEN(Reason) > 0");
 
-                            t.HasCheckConstraint("CK_DecisionType", "decisionType IN ('Approve', 'Deny')");
+                            t.HasCheckConstraint("CK_DecisionType", "DecisionType IN ('Approve', 'Deny')");
                         });
                 });
 
             modelBuilder.Entity("Flags.Flag", b =>
                 {
-                    b.Property<int>("flagId")
+                    b.Property<int>("FlagId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("flagId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("FlagId"));
 
-                    b.Property<DateTime?>("clearedAt")
+                    b.Property<DateTime?>("ClearedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("clearedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<int?>("ClearedBy")
+                        .HasColumnType("int");
 
-                    b.Property<string>("clearedReason")
+                    b.Property<string>("ClearedReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<DateTime>("raisedAt")
+                    b.Property<DateTime>("RaisedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("raisedBy")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
-
-                    b.Property<int>("ticketId")
+                    b.Property<int?>("RaisedBy")
                         .HasColumnType("int");
 
-                    b.Property<string>("violationType")
+                    b.Property<int>("TicketId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ViolationType")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("varchar(30)");
 
-                    b.HasKey("flagId");
+                    b.HasKey("FlagId");
 
-                    b.HasIndex("ticketId");
+                    b.HasIndex("ClearedBy");
 
-                    b.ToTable("Flags", null, t =>
+                    b.HasIndex("RaisedBy");
+
+                    b.HasIndex("TicketId");
+
+                    b.ToTable("Flags", t =>
                         {
-                            t.HasCheckConstraint("CK_ClearedReason", "clearedAt IS NULL OR (clearedBy IS NOT NULL AND clearedReason IS NOT NULL AND LEN(clearedReason) > 0)");
-
-                            t.HasCheckConstraint("CK_ViolationType", "violationType IN ('VerificationFailed', 'OfacMatch', 'ProhibitedIndustry', 'ClosedJurisdiction')");
+                            t.HasCheckConstraint("CK_ViolationType", "ViolationType IN ('VerificationFailed', 'OfacMatch', 'ProhibitedIndustry', 'ClosedJurisdiction')");
                         });
                 });
 
             modelBuilder.Entity("Tickets.Ticket", b =>
                 {
-                    b.Property<int>("ticketId")
+                    b.Property<int>("TicketId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("ticketId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("TicketId"));
 
-                    b.Property<string>("accountType")
+                    b.Property<string>("AccountType")
                         .IsRequired()
                         .HasMaxLength(15)
                         .HasColumnType("varchar(15)");
 
-                    b.Property<string>("assignedTo")
-                        .HasMaxLength(450)
-                        .HasColumnType("nvarchar(450)");
+                    b.Property<string>("AssignedTo")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
-                    b.Property<DateTime>("createdAt")
+                    b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<int>("customerId")
+                    b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
-                    b.Property<string>("riskRating")
+                    b.Property<int?>("JointCustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RiskRating")
                         .HasMaxLength(6)
                         .HasColumnType("varchar(6)");
 
-                    b.Property<string>("status")
+                    b.Property<string>("Status")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
                         .HasColumnType("varchar(20)")
                         .HasDefaultValue("Submitted");
 
-                    b.Property<DateTime>("verificationDeadline")
+                    b.Property<DateTime>("VerificationDeadline")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("ticketId");
+                    b.HasKey("TicketId");
 
-                    b.HasIndex("customerId");
+                    b.HasIndex("AssignedTo");
 
-                    b.ToTable("Tickets", null, t =>
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("JointCustomerId");
+
+                    b.ToTable("Tickets", t =>
                         {
-                            t.HasCheckConstraint("CK_AccountType", "accountType IN ('Individual', 'Joint')");
+                            t.HasCheckConstraint("CK_AccountType", "AccountType IN ('Individual', 'Joint')");
 
-                            t.HasCheckConstraint("CK_RiskRating", "riskRating IS NULL OR riskRating IN ('Low', 'Medium', 'High')");
+                            t.HasCheckConstraint("CK_JointAccount", "(AccountType = 'Joint' AND JointCustomerId IS NOT NULL AND JointCustomerId <> CustomerId) OR (AccountType = 'Individual' AND JointCustomerId IS NULL)");
 
-                            t.HasCheckConstraint("CK_Status", "status IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                            t.HasCheckConstraint("CK_RiskRating", "RiskRating IS NULL OR RiskRating IN ('Low', 'Medium', 'High')");
 
-                            t.HasCheckConstraint("CK_VerificationDeadline", "verificationDeadline = DATEADD(DAY, 60, createdAt)");
+                            t.HasCheckConstraint("CK_Status", "Status IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+
+                            t.HasCheckConstraint("CK_VerificationDeadline", "VerificationDeadline = DATEADD(DAY, 60, CreatedAt)");
                         });
                 });
 
             modelBuilder.Entity("VendorResponses.VendorResponse", b =>
                 {
-                    b.Property<int>("vendorResponseId")
+                    b.Property<int>("VendorResponseId")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int");
 
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("vendorResponseId"));
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("VendorResponseId"));
 
-                    b.Property<string>("addressMatch")
+                    b.Property<string>("AddressMatch")
                         .IsRequired()
                         .HasMaxLength(7)
                         .HasColumnType("varchar(7)");
 
-                    b.Property<string>("dateOfBirthMatch")
+                    b.Property<string>("DateOfBirthMatch")
                         .IsRequired()
                         .HasMaxLength(7)
                         .HasColumnType("varchar(7)");
 
-                    b.Property<string>("nameMatch")
+                    b.Property<string>("NameMatch")
                         .IsRequired()
                         .HasMaxLength(7)
                         .HasColumnType("varchar(7)");
 
-                    b.Property<string>("riskCodes")
+                    b.Property<string>("RiskCodes")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
-                    b.Property<int>("score")
+                    b.Property<int>("Score")
                         .HasColumnType("int");
 
-                    b.Property<string>("taxIdMatch")
+                    b.Property<string>("TaxIdMatch")
                         .IsRequired()
                         .HasMaxLength(7)
                         .HasColumnType("varchar(7)");
 
-                    b.Property<int>("ticketId")
+                    b.Property<int>("TicketId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("timeStamp")
+                    b.Property<DateTime>("TimeStamp")
                         .HasColumnType("datetime2");
 
-                    b.HasKey("vendorResponseId");
+                    b.HasKey("VendorResponseId");
 
-                    b.HasIndex("ticketId");
+                    b.HasIndex("TicketId");
 
-                    b.ToTable("VendorResponses", null, t =>
+                    b.ToTable("VendorResponses", t =>
                         {
-                            t.HasCheckConstraint("CK_AddressMatch", "addressMatch IN ('Match', 'Partial', 'NoMatch')");
+                            t.HasCheckConstraint("CK_AddressMatch", "AddressMatch IN ('Match', 'Partial', 'NoMatch')");
 
-                            t.HasCheckConstraint("CK_DateOfBirthMatch", "dateOfBirthMatch IN ('Match', 'Partial', 'NoMatch')");
+                            t.HasCheckConstraint("CK_DateOfBirthMatch", "DateOfBirthMatch IN ('Match', 'Partial', 'NoMatch')");
 
-                            t.HasCheckConstraint("CK_NameMatch", "nameMatch IN ('Match', 'Partial', 'NoMatch')");
+                            t.HasCheckConstraint("CK_NameMatch", "NameMatch IN ('Match', 'Partial', 'NoMatch')");
 
-                            t.HasCheckConstraint("CK_Score", "score BETWEEN 0 AND 50");
+                            t.HasCheckConstraint("CK_Score", "Score BETWEEN 0 AND 50");
 
-                            t.HasCheckConstraint("CK_TaxIdMatch", "taxIdMatch IN ('Match', 'Partial', 'NoMatch')");
+                            t.HasCheckConstraint("CK_TaxIdMatch", "TaxIdMatch IN ('Match', 'Partial', 'NoMatch')");
                         });
                 });
 
             modelBuilder.Entity("AuditTrails.AuditTrail", b =>
                 {
-                    b.HasOne("Tickets.Ticket", "ticket")
+                    b.HasOne("Customers.Customer", "Customer")
                         .WithMany()
-                        .HasForeignKey("ticketId")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("ticket");
+                    b.HasOne("Tickets.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("Decisions.Decision", b =>
                 {
-                    b.HasOne("Tickets.Ticket", "ticket")
+                    b.HasOne("Admins.Admin", "DecidedByAdmin")
                         .WithMany()
-                        .HasForeignKey("ticketId")
+                        .HasForeignKey("DecidedBy")
+                        .HasPrincipalKey("Username")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("ticket");
+                    b.HasOne("Tickets.Ticket", "Ticket")
+                        .WithOne()
+                        .HasForeignKey("Decisions.Decision", "TicketId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("DecidedByAdmin");
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("Flags.Flag", b =>
                 {
-                    b.HasOne("Tickets.Ticket", "ticket")
+                    b.HasOne("Admins.Admin", "ClearedByAdmin")
                         .WithMany()
-                        .HasForeignKey("ticketId")
+                        .HasForeignKey("ClearedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Admins.Admin", "RaisedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("RaisedBy")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Tickets.Ticket", "Ticket")
+                        .WithMany()
+                        .HasForeignKey("TicketId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("ticket");
+                    b.Navigation("ClearedByAdmin");
+
+                    b.Navigation("RaisedByAdmin");
+
+                    b.Navigation("Ticket");
                 });
 
             modelBuilder.Entity("Tickets.Ticket", b =>
                 {
-                    b.HasOne("Customers.Customer", "customer")
+                    b.HasOne("Admins.Admin", "AssignedToAdmin")
                         .WithMany()
-                        .HasForeignKey("customerId")
+                        .HasForeignKey("AssignedTo")
+                        .HasPrincipalKey("Username")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("customer");
+                    b.HasOne("Customers.Customer", "Customer")
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Customers.Customer", "JointCustomer")
+                        .WithMany()
+                        .HasForeignKey("JointCustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("AssignedToAdmin");
+
+                    b.Navigation("Customer");
+
+                    b.Navigation("JointCustomer");
                 });
 
             modelBuilder.Entity("VendorResponses.VendorResponse", b =>
                 {
-                    b.HasOne("Tickets.Ticket", "ticket")
+                    b.HasOne("Tickets.Ticket", "Ticket")
                         .WithMany()
-                        .HasForeignKey("ticketId")
+                        .HasForeignKey("TicketId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("ticket");
+                    b.Navigation("Ticket");
                 });
 #pragma warning restore 612, 618
         }
