@@ -33,7 +33,6 @@ export class Signup {
     ],
   });
 
-
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);

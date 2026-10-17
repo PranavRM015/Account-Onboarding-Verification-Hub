@@ -1,5 +1,5 @@
-import {ComponentFixture, TestBed} from '@angular/core/testing';
-import {Signup} from '../signup';
+import { ComponentFixture, TestBed} from '@angular/core/testing';
+import { Signup } from '../signup';
 import { provideHttpClient } from '@angular/common/http';
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
@@ -28,7 +28,7 @@ import {
   longUsernamePwdViolation4,
   longUsernamePwdViolation5,
   validUsernamePwd,
-} from './blankCredentials';
+} from '../../credentials/blankCredentials';
 
 interface Scenario {
   description: string;

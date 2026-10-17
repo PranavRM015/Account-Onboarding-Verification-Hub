@@ -19,11 +19,12 @@ export class Login {
   hideModal(): void {
     this.activeModal = null;
   }
-  protected username = new FormControl('', {
+
+  readonly username = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required, Validators.minLength(3), Validators.maxLength(40)],
   });
-  protected password = new FormControl('', {
+  readonly password = new FormControl('', {
     nonNullable: true,
     validators: [
       Validators.required,
@@ -31,6 +32,7 @@ export class Login {
       Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/),
     ],
   });
+  
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
