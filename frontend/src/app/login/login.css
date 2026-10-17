@@ -1,43 +1,49 @@
-html, body {
-  background-color: #000000;
-  color: #ffffff;
-  margin: 0;
-  min-height: 100vh;
+.username-container,
+.password-container {
+    position: relative;
+    display: inline-block;
 }
-.fields {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  font-size: 16px;
-  text-align: center;
+
+.modal {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0px;
+    height: 260px;
+    width: 70px;
+    z-index: 1000;
+    background-color: rgba(0,0,0,0.5);
+    text-align: left;
 }
-.text{
-  width: 100%;
-  gap: 100px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+
+.modal.show {
+    display: flex;
 }
-.buttons{
-  width: 30px;
-  height: 10px;
-  padding: 20px;
-  gap: 70px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+
+.modal-content{
+    background-color: #b1b1b1;
+    padding: 20px;
+    border: 1px black;
+    border-radius: 6px;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    text-align: left;
+
 }
-.my-box{
-  width: 300px;
-  height: 300px;
-  background-color: #000000;
-  border: 2px solid #ffffff;
-  border-radius: 8px;
-  padding: 20px;
-  margin: 15px;
-  align-items: center;
-  display: flex;
-  flex-direction: column;
-  margin-left: auto;
-  margin-right: auto;
+
+.modal-text{
+    color:black;
+    font-family: Arial, sans-serif;
+    font-size: 50%;
+    margin: 0%;
+    padding-left: 20px;
+}
+
+.modal-text li {
+    margin-bottom: 6px;
+}
+
+.modal-text li:last-child {
+    margin-bottom: 0;
 }

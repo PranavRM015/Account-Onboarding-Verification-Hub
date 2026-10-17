@@ -1,8 +1,8 @@
-import { Component, Input, OnChanges, SimpleChanges, inject  } from '@angular/core';
+import { Component, inject  } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { RedirectCommand } from '@angular/router';
-import { viewChild, ElementRef } from '@angular/core';
 import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
+import { Router, ActivatedRoute } from '@angular/router';
+
 
 @Component({
   imports: [FormsModule, ReactiveFormsModule],
@@ -11,73 +11,56 @@ import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angu
   templateUrl: './signup.html',
 })
 export class Signup {
-  isModalVisible = false;
-  protected username = new FormControl<string>('', { validators: [Validators.required], nonNullable: true });
-  protected password: string = '';
-  private http = inject(HttpClient);
-  
-  showModal(): void {
-    this.isModalVisible = true;
+  activeModal: 'username' | 'password' | null = null;
+
+  showModal(which: string): void {
+    this.activeModal = which as 'username' | 'password' | null;
   }
   hideModal(): void {
-    this.isModalVisible = false;
+    this.activeModal = null;
   }
-  checkPassword(password: string = this.password): boolean {
-    return (
-      password.length >= 8 &&
-      /[A-Z]/.test(password) &&
-      /[a-z]/.test(password) &&
-      /[0-9]/.test(password) &&
-      /[^A-Za-z0-9]/.test(password)
-    );
-  }
-  acceptAdminCredentials(username: string, password: string): void {
+
+  readonly username = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.minLength(3), Validators.maxLength(40)],
+  });
+  readonly password = new FormControl('', {
+    nonNullable: true,
+    validators: [
+      Validators.required,
+      Validators.minLength(8),
+      Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/),
+    ],
+  });
+
+
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
+
+  acceptAdminCredentials(): void {
     console.log('Form submitted!');
-    console.log('Username:', username);
-    console.log('Password entered:', password.length > 0);
+    if (this.username.invalid) { this.activeModal = 'username'; return; }
+    if (this.password.invalid) { this.activeModal = 'password'; return; }
 
-    const validPassword = this.checkPassword(this.password);
-    if(!username.trim() || !password || !validPassword){
-      this.isModalVisible = true;
-      return;
-    }
-    const requestBody = { username: username.trim(), password };
+    const username = this.username.value;
+    const password = this.password.value;
+    const requestBody = { username, password };
     console.log('Submitting signup request:', {
       username: requestBody.username,
       passwordPresent: !!requestBody.password
     });
 
-    this.http.post('/api/users', requestBody).subscribe(
-      {next: (response) => {
-        console.log('User created successfully:', response);
+    this.http.post('/api/admins/signup', requestBody, { responseType: 'text' }).subscribe({
+      next: (response) => {
+        console.log('Admin created successfully:', response);
+        alert('Successfully signed up! Please log in with your new credentials.');
+        this.router.navigate(['/']);
       },
-      error: (error) =>{
+      error: (error) => {
         console.error('Signup failed:', error);
-        this.isModalVisible = true; 
+        alert(error.status === 409 ? 'That username is already taken.' : 'Signup failed. Please try again.');
       }
     });
-    alert(username + ', ' + password);
-
   }
-  /*acceptAdminCredentials(username: string, password: string): void {
-    const validPassword = this.checkPassword(this.password);
-    if(!username.trim() || !password || !validPassword){
-      this.isModalVisible = true;
-      return;
-    }
-    const requestBody = { username: username.trim(), password };
-    console.log('Submitting signup request:', {
-      username: requestBody.username,
-      passwordPresent: !!requestBody.password
-    });
-    this.http.post('http://localhost:5278/api/users', requestBody).subscribe(
-      {next: (response) => {
-        console.log('User created successfully:', response);
-      },
-      error: (error) =>{
-        console.error('Signup failed:', error);
-        this.isModalVisible = true; 
-      }
-    });
-  }*/
 }
