@@ -128,7 +128,7 @@ Submitted, Review, Approved, Rejected
 - If the vendor's verification score is below the threshold, or the vendor returns a risk code such as a deceased SSN or a correctional facility address, a VerificationFailed flag will be raised.
 - If the customer's name matches a name on the OFAC sanctions list, an OfacMatch flag will be raised, and a reviewer will compare the details to decide if it is the same person.
 - Customers whose occupation, employer, or industry indicates involvement in cannabis production, distribution, or ancillary services will be flagged for review.
-- Accounts based in Mexico are in the open tier and will be accepted. Maintain tier countries (Canada is used as an example) will only be accepted for existing customers, while everything else will be in the closed tier. This rule is applied to the customer's country of residence.
+- Accounts based in the USA and Mexico are in the open tier and will be accepted. Everything else will be in the closed tier. This rule is applied to the customer's country of residence.
 - A ticket cannot be approved until every flag on it has been cleared.
 - High risk tickets will need a second approval from a different reviewer than the one who gave the first approval.
 - If a ticket is not resolved within 60 days, it will be moved to Rejected.

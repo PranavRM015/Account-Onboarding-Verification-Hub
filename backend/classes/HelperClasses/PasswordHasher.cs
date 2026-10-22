@@ -22,15 +22,12 @@ namespace PasswordHasherNamespace
             byte[] salt = Encoding.UTF8.GetBytes(pepper);
             return Rfc2898DeriveBytes.Pbkdf2(Encoding.UTF8.GetBytes(normalized), salt, Iterations, Algorithm, KeySize);
         }
-        // PasswordHasher.Verify(password, storedHash)
         public static bool VerifyPassword(string password,string storedHash)
         {
-            // Older rows may hold bcrypt hashes ($2a$, $2b$, ...)
             if (storedHash.StartsWith("$2"))
             {
                 return BCrypt.Net.BCrypt.Verify(password, storedHash);
             }
-            // Current format written by PasswordHash: base64(salt).base64(hash)
             var parts = storedHash.Split('.');
             if (parts.Length != 2)
             {

@@ -12,6 +12,10 @@ using Customers;
 using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using Admins;
+using Flags;
+using MockVendor;
+
 
 namespace AdminControlNamespace
 {
@@ -108,12 +112,13 @@ namespace AdminControlNamespace
                 {
                     return Unauthorized("Invalid username or password.");
                 }
+                var storedUsername = adminRepository.GetStoredUsername(username) ?? username;
                 // Session cookie; the input form controller reads the admin's name from it for Ticket.AssignedTo.
                 var identity = new ClaimsIdentity(
-                    new[] { new Claim(ClaimTypes.Name, username) },
+                    new[] { new Claim(ClaimTypes.Name, storedUsername) },
                     CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-                return Ok(new { message = "Admin logged in successfully", username });
+                return Ok(new { message = "Admin logged in successfully", username = storedUsername });
             }
             catch (Exception ex)
             {
@@ -224,6 +229,24 @@ namespace AdminControlNamespace
                 _db.Tickets.Add(ticket);
                 _db.SaveChanges(); // generates ticket.TicketId
 
+                var admin = _db.Admins.FirstOrDefault(a => a.Username == assignedTo);
+                if(admin is null){
+                    return Unauthorized("Your admin account is no longer active.");
+                }
+
+                var vendor = new Vendor(customer);
+                var vendorResponse = vendor.Verify(customer, ticket.TicketId);
+                var raisedFlags = new[]
+                {
+                    vendor.CheckVerification(admin, vendorResponse, ticket.TicketId),
+                    vendor.CheckOFACVerification(admin, customer, ticket.TicketId),
+                    vendor.CheckCountryTier(admin, customer, ticket.TicketId),
+                    vendor.CheckIllicitSubstances(admin, customer, ticket.TicketId),
+                }.OfType<Flag>().ToList();
+                ticket.RiskRating = vendor.FinalRiskRating();
+                _db.VendorResponses.Add(vendorResponse);
+                _db.Flags.AddRange(raisedFlags);
+
                 var audit = new AuditTrail(ticket.TicketId, customer.CustomerId, "Submitted", "Review",
                     "Ticket created", "Submission received");
                 var auditValidation = new AuditTrailValidator().Validate(audit);
@@ -232,10 +255,12 @@ namespace AdminControlNamespace
                     return BadRequest(string.Join(" ", auditValidation.Errors.Select(e => e.ErrorMessage)));
                 }
                 _db.AuditTrails.Add(audit);
+                _db.AuditTrails.Add(new AuditTrail(ticket.TicketId, customer.CustomerId, "Review", "Review", "Validation pipeline completed", $"{raisedFlags.Count} flag(s) raised; risk rating {ticket.RiskRating}"));
                 _db.SaveChanges();
 
                 transaction.Commit();
-                return Ok(new { message = "Customer saved", customer.CustomerId, ticket.TicketId });
+                return Ok(new { message = "Customer saved", customer.CustomerId, ticket.TicketId, verified = raisedFlags.Count == 0, riskRating = ticket.RiskRating, flags = raisedFlags.Select(f => f.ViolationType), vendorResponse = new { vendorResponse.Score, vendorResponse.RiskCodes } });
+
             }
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
             {

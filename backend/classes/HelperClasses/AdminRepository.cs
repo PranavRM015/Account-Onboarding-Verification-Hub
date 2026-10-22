@@ -11,6 +11,16 @@ namespace AdminRepo
             _connectionString = connectionString;
         }
 
+        public string? GetUsername(int AdminId)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+            using var command = new SqlCommand("select Username from Admins where AdminId = @AdminId", connection);
+            command.Parameters.AddWithValue("@AdminId", @AdminId);
+            object? result = command.ExecuteScalar();
+            return result?.ToString(); 
+        }
+
         public void AddAdmin(string username, string password)
         {
             using var connection = new SqlConnection(_connectionString);
@@ -18,7 +28,18 @@ namespace AdminRepo
             using var command = new SqlCommand("INSERT INTO Admins (Username, PasswordHash) VALUES (@Username, @PasswordHash)", connection);
             command.Parameters.AddWithValue("@Username", username);
             command.Parameters.AddWithValue("@PasswordHash", PasswordHasher.PasswordHash(password));
-            command.ExecuteNonQuery();
+            var ticketId = command.ExecuteScalar();
+            using var getAdminId = new SqlCommand("Select top 1 AdminId from Admins where Username = @Username", connection);
+            getAdminId.Parameters.AddWithValue("@Username", username);
+            object adminIdVal = getAdminId.ExecuteScalar();
+            int AdminId = 0;
+            if(adminIdVal!= null)
+            {
+                AdminId = Convert.ToInt32(adminIdVal);
+            }
+            
+            //string userName = "";
+            //userName = GetUsername(AdminId);
         }
 
         public int GetRecentTicket(int customerId)
@@ -42,6 +63,16 @@ namespace AdminRepo
             return storedHash != null && PasswordHasher.VerifyPassword(password, storedHash);
         }
 
+        /// <summary>The username exactly as stored (SQL Server matches usernames case-insensitively), or null when there is no such admin.</summary>
+        public string? GetStoredUsername(string username)
+        {
+            using var connection = new SqlConnection(_connectionString);
+            connection.Open();
+            using var command = new SqlCommand("SELECT Username FROM Admins WHERE Username = @Username", connection);
+            command.Parameters.AddWithValue("@Username", username);
+            return command.ExecuteScalar() as string;
+        }
+
         public bool InsertTicket(int customerId, int? jointCustomerId, string accountType, string assignedTo)
         {
             var createdAt = DateTime.UtcNow;
@@ -60,14 +91,15 @@ namespace AdminRepo
             return command.ExecuteNonQuery() == 1;
         }
 
-        public bool InsertAuditTrails(int customerId, string prevStatus, string currStatus, string ATMessage, string reason, string accountType)
+        public bool InsertAuditTrails(int ticketId, int customerId, string prevStatus, string currStatus, string ATMessage, string reason)
         {
             var dateTimeOccurred = DateTime.UtcNow;
             using var connection = new SqlConnection(_connectionString);
             connection.Open();
             using var command = new SqlCommand(
-                "INSERT INTO AuditTrail(PrevStatus, CurrStatus, ATMessage, Reason, DateTimeOccurred, CustomerId) " +
-                "VALUES (@prevStatus, 'currStatus', @ATMessage, @reason, @dateTimeOccurred, @CustomerId)", connection);
+                "INSERT INTO AuditTrails(TicketId, PrevStatus, CurrStatus, ATMessage, Reason, DateTimeOccurred, CustomerId) " +
+                "VALUES (@ticketId, @prevStatus, @currStatus, @ATMessage, @reason, @dateTimeOccurred, @CustomerId)", connection);
+            command.Parameters.AddWithValue("@ticketId",ticketId);
             command.Parameters.AddWithValue("@PrevStatus", prevStatus);
             command.Parameters.AddWithValue("@CurrStatus", currStatus);
             command.Parameters.AddWithValue("@ATMessage", ATMessage);
@@ -127,16 +159,17 @@ namespace AdminRepo
             return command.ExecuteNonQuery() == 1;
         }
 
-        public bool UpdateFlag(string clearedBy, int flagID)
+        public bool UpdateFlag(int clearedBy, int flagID, string reason)
         {
             DateTime clearedAt = DateTime.UtcNow;
             using var connection = new SqlConnection(_connectionString);
             connection.Open();
             using var command = new SqlCommand(
-            "UPDATE Flag SET clearedBy = @clearedBy, clearedAt = @clearedAt WHERE flagID = @flagID");
+            "UPDATE Flags SET clearedBy = @clearedBy, clearedAt = @clearedAt, ClearedReason = @reason WHERE flagID = @flagID AND clearedAt IS Null", connection);
             command.Parameters.AddWithValue("@clearedBy", clearedBy);
             command.Parameters.AddWithValue("@clearedAt", clearedAt);
             command.Parameters.AddWithValue("@flagID", flagID);
+            command.Parameters.AddWithValue("@reason", reason);
             return command.ExecuteNonQuery() == 1;
         }
 
@@ -171,8 +204,9 @@ namespace AdminRepo
             using var connection = new SqlConnection(_connectionString);
             connection.Open();
             using var command = new SqlCommand(
-                "UPDATE Ticket SET riskRating = @riskRating WHERE ticketId = @ticketId");
+                "UPDATE Tickets SET riskRating = @riskRating WHERE ticketId = @ticketId", connection);
             command.Parameters.AddWithValue("@riskRating", riskRating);
+            command.Parameters.AddWithValue("@ticketId", ticketId);
             return command.ExecuteNonQuery() == 1;
         }
 
