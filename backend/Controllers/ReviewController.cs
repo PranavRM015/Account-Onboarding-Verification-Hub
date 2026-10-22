@@ -108,6 +108,11 @@ namespace ReviewControlNamespace
                 transaction.Commit();
                 return Ok(new { message = "Ticket approved", ticket.TicketId });
             }
+            catch (DbUpdateConcurrencyException)
+            {
+                _db.ChangeTracker.Clear();
+                return Conflict("The ticket was changed by someone else. Reload it and try again.");
+            }
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
             {
                 _db.ChangeTracker.Clear();
@@ -296,6 +301,11 @@ namespace ReviewControlNamespace
                 _db.SaveChanges();
                 transaction.Commit();
                 return Ok(new { message = "Ticket rejected", ticket.TicketId });
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                _db.ChangeTracker.Clear();
+                return Conflict("The ticket was changed by someone else. Reload it and try again.");
             }
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
             {

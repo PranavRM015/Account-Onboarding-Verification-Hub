@@ -6,7 +6,7 @@
 
 **Goal (one sentence):** This application will verify the identity of incoming brokerage customers, flag those who do not meet the firm's acceptance rules for review, and keep a permanent record of every decision that is made.
 
-**Overview:** The Account Onboarding Verification Hub will accept tickets from an Angular based form containing the customer's information--including the customer's name, date of birth, residential address, tax ID, occupation, employer, and country of residence. The API will validate the submission and save it to the database as a new ticket. The backend will consist of a validation pipeline containing stages dealing with format checking, identity verification (through a mocked third-party vendor), and screening the customer against the firm's rules. Any problems found along the way will be raised as flags. The system will not reject a customer on its own; instead, a reviewer will look at each flag and decide whether to clear it, restrict the account, or deny it. High risk tickets will need a second approval from a different reviewer before they can be approved.
+**Overview:** The Account Onboarding Verification Hub will accept tickets from an Angular based form containing the customer's information--including the customer's name, date of birth, residential address, tax ID, occupation, employer, and country of residence. The API will validate the submission and save it to the database as a new ticket. The backend will consist of a validation pipeline containing stages dealing with format checking, identity verification (through a mocked third-party vendor), and screening the customer against the firm's rules. Any problems found along the way will be raised as flags. Apart from the 60-day limit described in the rules below, the system will not reject a customer on its own; instead, a reviewer will look at each flag and decide whether to clear it, restrict the account, or deny it. High risk tickets will need a second approval from a different reviewer before they can be approved.
 
 **Tech Stack:**
 
@@ -16,7 +16,7 @@
 | Backend | ASP.NET Core (C#) |
 | Object Relational Mapper | Entity Framework Core |
 | Database | Microsoft SQL Server |
-| Authentication | ASP.NET Core Identity |
+| Authentication | ASP.NET Core cookie authentication with a custom Admin table (PBKDF2-SHA512 password hashes) |
 | Hosting | Local (MVP), Azure (post-MVP) |
 | Testing | xUnit (.NET), Jasmine/Karma (Angular) |
 
@@ -32,6 +32,8 @@
 | username | nvarchar(100) | Not null, unique (alternate key; referenced by Ticket.assignedTo and Decision.decidedBy) |
 | passwordHash | nvarchar(200) | Not null, salted PBKDF2 hash stored as base64(salt).base64(hash); the plain password is never stored |
 
+A `system` admin exists only so that automatic rejections can be recorded as a decision. Its password hash can never match, so it cannot log in.
+
 **Ticket**
 
 | Attribute | Type | Constraints |
@@ -45,6 +47,9 @@
 | verificationDeadline | datetime2 | Not null, createdAt + 60 days |
 | assignedTo | nvarchar(100) | Not null, Foreign key references Admin.username |
 | firstApprovedBy | nvarchar(100) | Foreign key references Admin.username. Null until a High risk ticket gets its first approval |
+| rowVersion | rowversion | Not null, generated automatically by SQL Server and changed on every update. Used to detect two reviewers changing the same ticket at once |
+
+
 
 **Customer**
 
@@ -124,16 +129,16 @@ Submitted, Review, Approved, Rejected
 
 **Rules:**
 
-- Every required field must be filled out and in the correct format (ex. SSN is 9 digits, date of birth is not in the future), otherwise the ticket will be sent back before verification.
-- If the vendor's verification score is below the threshold, or the vendor returns a risk code such as a deceased SSN or a correctional facility address, a VerificationFailed flag will be raised.
+- Every required field must be filled out and in the correct format (ex. SSN is 9 digits, date of birth is not in the future), otherwise the API returns an error and no ticket is created, so the submission is sent back before verification.
+- If the vendor's verification score is below the threshold (scores run from 0 to 50 and anything under 50 fails), or the vendor returns a risk code such as a deceased SSN or a correctional facility address, a VerificationFailed flag will be raised.
 - If the customer's name matches a name on the OFAC sanctions list, an OfacMatch flag will be raised, and a reviewer will compare the details to decide if it is the same person.
 - Customers whose occupation, employer, or industry indicates involvement in cannabis production, distribution, or ancillary services will be flagged for review.
 - Accounts based in the USA and Mexico are in the open tier and will be accepted. Everything else will be in the closed tier. This rule is applied to the customer's country of residence.
 - A ticket cannot be approved until every flag on it has been cleared.
 - High risk tickets will need a second approval from a different reviewer than the one who gave the first approval.
-- If a ticket is not resolved within 60 days, it will be moved to Rejected.
+- If a ticket is not resolved within 60 days, it will be moved to Rejected. A stored procedure that runs on a daily schedule does this: it sets the status to Rejected, records a decision by the system account with the reason "Not resolved within 60 days", and writes an audit row.
 
-How the risk rating is calculated has not been determined yet.
+The risk rating is the highest level reached by any flag on the ticket. An OfacMatch or ProhibitedIndustry flag makes it High, a ClosedJurisdiction or VerificationFailed flag makes it Medium, and a ticket with no flags is Low.
 
 **Testing:**
 

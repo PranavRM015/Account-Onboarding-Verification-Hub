@@ -51,6 +51,8 @@ namespace Tickets
         public string? FirstApprovedBy { get; set; } // references Admins.Username; set when a High risk ticket gets its first approval
         [ForeignKey(nameof(FirstApprovedBy))]
         public Admin? FirstApprovedByAdmin { get; set; }
+        [Timestamp]
+        public byte[] RowVersion { get; set; } = Array.Empty<byte>();
         private Ticket() { } // Used by EF Core for materialization
 
         public Ticket(int customerId, string accountType, string assignedTo, int? jointCustomerId = null)
