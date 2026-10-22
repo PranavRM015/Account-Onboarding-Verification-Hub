@@ -11,7 +11,7 @@ namespace AuditTrails
 {
     public static class AuditTrailValues
     {
-        public static readonly string[] Statuses = { "Submitted", "FormatVerification", "Review", "Approved", "Rejected" };
+        public static readonly string[] TicketStatuses = { "Submitted", "Review", "Approved", "Rejected" };
     }
 
     // Rows in AuditTrail are never updated or deleted.
@@ -32,18 +32,18 @@ namespace AuditTrails
         [MaxLength(20), Column(TypeName = "varchar(20)")]
         public string CurrStatus { get; set; } = string.Empty;
         [MaxLength(250)]
-        public string Message { get; set; } = string.Empty;
+        public string ATMessage { get; set; } = string.Empty;
         [MaxLength(500)]
         public string Reason { get; set; } = string.Empty;
         public DateTime DateTimeOccurred { get; set; }
         private AuditTrail() { } // Used by EF Core for materialization.
-        public AuditTrail(int ticketId, int customerId, string prevStatus, string currStatus, string message, string reason)
+        public AuditTrail(int ticketId, int customerId, string prevStatus, string currStatus, string atMessage, string reason)
         {
             this.TicketId = ticketId;
             this.CustomerId = customerId;
             this.PrevStatus = prevStatus;
             this.CurrStatus = currStatus;
-            this.Message = message;
+            this.ATMessage = atMessage;
             this.Reason = reason;
             this.DateTimeOccurred = DateTime.UtcNow;
         }
@@ -56,9 +56,9 @@ namespace AuditTrails
             builder.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_AuditPrevStatus",
-                    "PrevStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                    "PrevStatus IN ('Submitted', 'Review', 'Approved', 'Rejected')");
                 t.HasCheckConstraint("CK_AuditCurrStatus",
-                    "CurrStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                    "CurrStatus IN ('Submitted', 'Review', 'Approved', 'Rejected')");
             });
             builder.HasOne(x => x.Ticket)
             .WithMany()
@@ -81,14 +81,14 @@ namespace AuditTrails
             RuleFor(x => x.CustomerId).GreaterThan(0);
 
             RuleFor(x => x.PrevStatus).NotEmpty()
-                .Must(v => AuditTrailValues.Statuses.Contains(v))
+                .Must(v => AuditTrailValues.TicketStatuses.Contains(v))
                 .WithMessage("Invalid previous status.");
 
             RuleFor(x => x.CurrStatus).NotEmpty()
-                .Must(v => AuditTrailValues.Statuses.Contains(v))
+                .Must(v => AuditTrailValues.TicketStatuses.Contains(v))
                 .WithMessage("Invalid current status.");
 
-            RuleFor(x => x.Message).NotEmpty().MaximumLength(250);
+            RuleFor(x => x.ATMessage).NotEmpty().MaximumLength(250);
 
             RuleFor(x => x.Reason).NotEmpty().MaximumLength(500);
         }

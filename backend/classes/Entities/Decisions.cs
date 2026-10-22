@@ -12,7 +12,7 @@ namespace Decisions
 {
     public static class DecisionValues
     {
-        public static readonly string[] DecisionTypes = { "Approve", "Deny" };
+        public static readonly string[] DecisionTypes = { "Approve", "Reject" };
     }
 
     public class Decision
@@ -33,7 +33,7 @@ namespace Decisions
         public string Reason { get; set; } = string.Empty;
         public DateTime DecidedAt { get; set; }
 
-        // Required by EF Core for materialisation.
+        // Required by EF Core for materialization.
         private Decision() { }
 
         public Decision(int ticketId, string decisionType, string decidedBy, string reason)
@@ -53,7 +53,7 @@ namespace Decisions
             builder.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_DecisionType",
-                    "DecisionType IN ('Approve', 'Deny')");
+                    "DecisionType IN ('Approve', 'Reject')");
                 t.HasCheckConstraint("CK_DecisionReason",
                     "Reason IS NOT NULL AND LEN(Reason) > 0");
             });
@@ -85,7 +85,7 @@ namespace Decisions
 
             RuleFor(x => x.DecisionType).NotEmpty()
                 .Must(v => DecisionValues.DecisionTypes.Contains(v))
-                .WithMessage("Decision type must be Approve, or Deny.");
+                .WithMessage("Decision type must be Approve or Reject.");
 
             RuleFor(x => x.DecidedBy).NotEmpty().MaximumLength(100);
 

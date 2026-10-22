@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Verification Onboarding Hub</title>
+
+</head>
+<body>
+    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
+        <div class="my-box">
+            <h1>User Information Form</h1>
+            <div class="fields">
+            <label for="First Name">First Name:</label>
+            <input type="text" id="FirstName" name="FirstName" formControlName="FirstName" placeholder="Enter your first name" required>
+            </div>
+            
+            <div class="fields">
+            <label for="Middle Name">Middle Name:</label>
+            <input type="text" id="MiddleName" name="MiddleName" formControlName="MiddleName" placeholder="Enter your middle name">
+            </div>
+
+            <div class="fields">
+            <label for="Last Name">Last Name:</label>
+            <input type="text" id="LastName" name="LastName" formControlName="LastName" placeholder="Enter your last name" required>
+            </div>
+
+            <div class="fields">
+            <label for="DateOfBirth">Date of Birth:</label>
+            <input type="date" id="DateOfBirth" name="DateOfBirth" formControlName="DateOfBirth" [max]="maxBirthDate" required>
+            @if (dateOfBirth.errors?.['underage'] && dateOfBirth.touched) {
+            <span class="error">Customer must be at least 18 years old.</span>
+            }
+            </div>
+
+            <div class="fields">
+            <label for="Gender">Gender:</label>
+            <input type="radio" id="male" name="Gender" formControlName="Gender" value="Male" required>
+            <label for="male">Male</label>
+            <input type="radio" id="female" name="Gender" formControlName="Gender" value="Female" required>
+            <label for="female">Female</label>
+            <input type="radio" id="other" name="Gender" formControlName="Gender" value="Other" required>
+            <label for="other">Other</label>
+            </div>
+
+            <div class="fields">
+            <label for="taxIdType">Tax ID Type:</label>
+            <select id="taxIdType" name="taxIdType" formControlName="taxIdType" required>
+                <option value="" disabled>Select your tax ID type</option>
+                <option value="SSN">SSN (Social Security Number)</option>
+                <option value="ITIN">ITIN (Individual Taxpayer Identification Number)</option>
+                <option value="EIN">EIN (Employer Identification Number)</option>
+            </select>
+            </div>
+
+            <div class="fields">
+            <label for="typeOfAccount">Individual/Joint?</label>
+            <select id="typeOfAccount" name="accountType" formControlName="typeOfAccount" required>
+                <option value="" disabled>Select your account type</option>
+                <option value="Individual">Individual</option>
+                <option value="Joint">Joint</option>
+            </select>
+            </div>
+
+            @if (typeOfAccount.value === 'Joint') {
+            <div class="fields">
+            <div class="joint-container">
+            <label for="jointCustomerId">Joint Customer ID:</label>
+            <input type="number" id="jointCustomerId" name="jointCustomerId" formControlName="jointCustomerId"
+            placeholder="Enter the second holder's customer ID" min="1" step="1"
+            (focus)="hideModal()" />
+
+            <div id="jointCustomerModal" class="modal" [class.show]="activeModal === 'jointCustomer'">
+            <div class="modal-content">
+                <ul class="modal-text">
+                    <li><strong>This customer doesn't exist.</strong></li>
+                    <li>Check the ID, or submit the second holder's own form first to get one.</li>
+                </ul>
+            </div>
+            </div>
+            </div>
+            </div>
+            }
+
+            <div class="fields">
+            <label for="taxIdNumber">Tax ID Number:</label>
+            <input type="text" id="taxIdNumber" name="taxIdNumber" formControlName="taxIdNumber" placeholder="Enter your tax ID number" autocomplete="off" pattern="[A-Za-z0-9\-]{5,20}" required>
+            </div>
+
+            <div class="fields">
+            <label for="residentialAddress">Residential Address:</label>
+            <input type="text" id="residentialAddress" name="residentialAddress" formControlName="residentialAddress" placeholder="Enter your residential address" required>
+            </div>
+
+            <div class="fields">
+            <label for="countryOfResidence">Country of Residence:</label>
+            <select id="countryOfResidence" name="countryOfResidence" formControlName="countryOfResidence" required>
+                <option value="" disabled>Select your country of residence</option>
+                @for (c of countries; track c.code) {
+                <option [value]="c.code">{{ c.name }}</option>
+                }
+            </select>
+            </div>
+
+            <div class="fields">
+            <label for="countryOfCitizenship">Country of Citizenship:</label>
+            <select id="countryOfCitizenship" name="countryOfCitizenship" formControlName="countryOfCitizenship" required>
+                <option value="" disabled>Select your country of citizenship</option>
+                @for (c of countries; track c.code) {
+                <option [value]="c.code">{{ c.name }}</option>
+                }
+            </select>
+            </div>
+
+            <div class="fields">
+            <label for="occupation">Occupation:</label>
+            <input type="text" id="occupation" name="occupation" formControlName="occupation" placeholder="What is your occupation?" required>
+            </div>
+
+            <div class="fields">
+            <label for="Employer">Employer:</label>
+            <input type="text" id="Employer" name="Employer" formControlName="Employer" placeholder="What is your employer?" required>
+            </div>
+
+            <div class="fields">
+            <button type="submit" [disabled]="userForm.invalid">Submit</button>
+            </div>
+        </div>
+    </form>
+</body>
+</html>

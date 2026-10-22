@@ -64,8 +64,8 @@ namespace Customers{
             RuleFor(x => x.FirstName).NotEmpty().MaximumLength(50);
             RuleFor(x => x.MiddleName).MaximumLength(50);
             RuleFor(x => x.LastName).NotEmpty().MaximumLength(50);
-            RuleFor(x => x.DateOfBirth).LessThan(_ => DateTime.UtcNow.Date)
-                .WithMessage("Date of birth must be in the past.");
+            RuleFor(x => x.DateOfBirth).LessThanOrEqualTo(_ => DateTime.UtcNow.Date.AddYears(-18))
+                .WithMessage("Customer must be at least 18 years old.");
             RuleFor(x => x.Gender).NotEmpty()
                 .Must(v => Genders.Contains(v))
                 .WithMessage("Gender must be Male, Female, or Other.");

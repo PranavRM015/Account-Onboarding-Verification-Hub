@@ -7,11 +7,18 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Customers;
 using Admins;
 
+public enum FinalStatus
+{
+    Rejected,
+    Approved
+}
+
+
 namespace Tickets
 {
     public static class TicketValues
     {
-        public static readonly string[] Statuses = { "Submitted", "FormatVerification", "Review", "Approved", "Rejected" };
+        public static readonly string[] TicketStatuses = { "Submitted", "Review", "Approved", "Rejected" };
         public static readonly string[] AccountTypes = { "Individual", "Joint" };
         public static readonly string[] RiskRatings = { "Low", "Medium", "High" };
     }
@@ -29,7 +36,7 @@ namespace Tickets
         [ForeignKey(nameof(JointCustomerId))]
         public Customer? JointCustomer { get; set; }
         [MaxLength(20), Column(TypeName = "varchar(20)")]
-        public string Status { get; set; } = "Submitted";
+        public string TicketStatus { get; set; } = "Submitted";
         [MaxLength(15), Column(TypeName = "varchar(15)")]
         public string AccountType { get; set; } = string.Empty;
         [MaxLength(6), Column(TypeName = "varchar(6)")]
@@ -40,13 +47,17 @@ namespace Tickets
         public string AssignedTo { get; set; } = string.Empty; // references Admins.Username
         [ForeignKey(nameof(AssignedTo))]
         public Admin AssignedToAdmin { get; set; } = null!;
+        [MaxLength(100)]
+        public string? FirstApprovedBy { get; set; } // references Admins.Username; set when a High risk ticket gets its first approval
+        [ForeignKey(nameof(FirstApprovedBy))]
+        public Admin? FirstApprovedByAdmin { get; set; }
         private Ticket() { } // Used by EF Core for materialization
 
         public Ticket(int customerId, string accountType, string assignedTo, int? jointCustomerId = null)
         {
             this.CustomerId = customerId;
             this.JointCustomerId = jointCustomerId;
-            this.Status = "Submitted";
+            this.TicketStatus = "Submitted";
             this.AccountType = accountType;
             this.RiskRating = null;
             this.CreatedAt = DateTime.UtcNow;
@@ -61,7 +72,7 @@ namespace Tickets
             builder.ToTable(t =>
             {
                 t.HasCheckConstraint("CK_Status",
-                    "Status IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                    "TicketStatus IN ('Submitted', 'Review', 'Approved', 'Rejected')");
                 t.HasCheckConstraint("CK_AccountType",
                     "AccountType IN ('Individual', 'Joint')");
                 t.HasCheckConstraint("CK_RiskRating",
@@ -72,7 +83,7 @@ namespace Tickets
                     "(AccountType = 'Joint' AND JointCustomerId IS NOT NULL AND JointCustomerId <> CustomerId) " +
                     "OR (AccountType = 'Individual' AND JointCustomerId IS NULL)");
             });
-            builder.Property(x => x.Status).HasDefaultValue("Submitted");
+            builder.Property(x => x.TicketStatus).HasDefaultValue("Submitted");
             builder.HasOne(t => t.Customer)
                 .WithMany()
                 .HasForeignKey(t => t.CustomerId)
@@ -84,6 +95,11 @@ namespace Tickets
             builder.HasOne(t => t.AssignedToAdmin)
                 .WithMany()
                 .HasForeignKey(t => t.AssignedTo)
+                .HasPrincipalKey(a => a.Username)
+                .OnDelete(DeleteBehavior.Restrict);
+            builder.HasOne(t => t.FirstApprovedByAdmin)
+                .WithMany()
+                .HasForeignKey(t => t.FirstApprovedBy)
                 .HasPrincipalKey(a => a.Username)
                 .OnDelete(DeleteBehavior.Restrict);
         }
@@ -106,9 +122,9 @@ namespace Tickets
                 .When(x => x.AccountType == "Individual")
                 .WithMessage("An individual account cannot have a second customer.");
 
-            RuleFor(x => x.Status).NotEmpty()
-                .Must(v => TicketValues.Statuses.Contains(v))
-                .WithMessage("Status must be Submitted, FormatVerification, Review, Approved, or Rejected.");
+            RuleFor(x => x.TicketStatus).NotEmpty()
+                .Must(v => TicketValues.TicketStatuses.Contains(v))
+                .WithMessage("Status must be Submitted, Review, Approved, or Rejected.");
 
             RuleFor(x => x.AccountType).NotEmpty()
                 .Must(v => TicketValues.AccountTypes.Contains(v))

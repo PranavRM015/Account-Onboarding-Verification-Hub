@@ -24,18 +24,27 @@
 
 **Tables**
 
+**Admin**
+
+| Attribute | Type | Constraints |
+|---|---|---|
+| adminId | int | Not null, Identity(1,1), Primary key |
+| username | nvarchar(100) | Not null, unique (alternate key; referenced by Ticket.assignedTo and Decision.decidedBy) |
+| passwordHash | nvarchar(200) | Not null, salted PBKDF2 hash stored as base64(salt).base64(hash); the plain password is never stored |
+
 **Ticket**
 
 | Attribute | Type | Constraints |
 |---|---|---|
 | ticketId | int | Not null, Identity(1,1), Primary key |
 | customerId | int | Not null, Foreign key references Customer |
-| status | varchar(20) | Not null, default Submitted. Can be one of the following: Submitted, FormatVerification, Review, Approved, Rejected |
+| ticketStatus | varchar(20) | Not null, default Submitted. Can be one of the following: Submitted, Review, Approved, Rejected |
 | accountType | varchar(15) | Not null, can be one of the following: Individual, Joint |
 | riskRating | varchar(6) | Can be one of the following: Low, Medium, High. Null until scored |
 | createdAt | datetime2 | Not null |
 | verificationDeadline | datetime2 | Not null, createdAt + 60 days |
-| assignedTo | nvarchar(450) |  |
+| assignedTo | nvarchar(100) | Not null, Foreign key references Admin.username |
+| firstApprovedBy | nvarchar(100) | Foreign key references Admin.username. Null until a High risk ticket gets its first approval |
 
 **Customer**
 
@@ -48,7 +57,7 @@
 | dateOfBirth | date | Not null |
 | gender | varchar(6) | Not null, can be one of the following: Male, Female, Other |
 | taxIdType | varchar(4) | Not null, can be one of the following: SSN, ITIN, EIN |
-| taxIdHash | binary(32) | Not null, used to look up duplicates without storing the full number |
+| taxIdHash | binary(32) | Not null, unique. Used to look up duplicates without storing the full number |
 | taxIdLastFourDigits | char(4) | Not null, used for display only |
 | residentialAddress | nvarchar(200) | Not null |
 | countryOfResidence | char(2) | Not null, ISO country code |
@@ -60,7 +69,7 @@
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| vendorResponseId | int | Identity(1,1), Primary key |
+| vendorResponseId | int | Not null, Identity(1,1), Primary key |
 | ticketId | int | Not null, Foreign key references Ticket |
 | nameMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
 | dateOfBirthMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
@@ -68,29 +77,29 @@
 | taxIdMatch | varchar(7) | Not null, Can be one of the following: Match, Partial, NoMatch |
 | score | int | Not null, between 0 and 50 |
 | riskCodes | nvarchar(200) | Not null, ex. DeceasedSSN, CorrectionalAddress |
-| timeStamp | datetime2 | Not null |
+| VRTimeStamp | datetime2 | Not null |
 
 **Flag**
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| flagId | int | Identity(1,1), Primary key, Not null |
+| flagId | int | Not null, Identity(1,1), Primary key |
 | ticketId | int | Not null, Foreign key references Ticket |
 | violationType | varchar(30) | Not null, can be one of the following: VerificationFailed, OfacMatch, ProhibitedIndustry, ClosedJurisdiction |
-| raisedBy | nvarchar(450) | Foreign key references AspNetUsers. Null when raised by the system |
+| raisedBy | int | Foreign key references Admin.adminId. Null when raised by the system |
 | raisedAt | datetime2 | Not null |
-| clearedBy | nvarchar(450) |  |
-| clearedAt | datetime2 | Not null |
+| clearedBy | int | Foreign key references Admin.adminId. Required when the flag is cleared |
+| clearedAt | datetime2 | Null until the flag is cleared |
 | clearedReason | nvarchar(500) | Required when the flag is cleared |
 
 **Decision**
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| decisionId | int | Identity(1,1), Primary key, Not null |
-| ticketId | int | Not null, Foreign key references Ticket |
-| decisionType | varchar(20) | Not null, can be one of the following: Approve, Deny |
-| decidedBy | nvarchar(450) | Not null |
+| decisionId | int | Not null, Identity(1,1), Primary key |
+| ticketId | int | Not null, unique (one decision per ticket, cannot be changed once saved), Foreign key references Ticket |
+| decisionType | varchar(20) | Not null, can be one of the following: Approve, Reject |
+| decidedBy | nvarchar(100) | Not null, Foreign key references Admin.username |
 | reason | nvarchar(1000) | Not null |
 | decidedAt | datetime2 | Not null |
 
@@ -98,12 +107,12 @@
 
 | Attribute | Type | Constraints |
 |---|---|---|
-| recId | int | Identity(1,1), Primary key |
+| recId | int | Not null, Identity(1,1), Primary key |
 | ticketId | int | Not null, Foreign key references Ticket |
-| userId | nvarchar(450) | Not null |
-| prevStatus | varchar(20) | Not null |
-| currStatus | varchar(20) | Not null |
-| message | nvarchar(250) | Not null |
+| customerId | int | Not null, Foreign key references Customer. Should match the ticket's customerId |
+| prevStatus | varchar(20) | Not null, can be one of the following: Submitted, Review, Approved, Rejected |
+| currStatus | varchar(20) | Not null, can be one of the following: Submitted, Review, Approved, Rejected |
+| ATMessage | nvarchar(250) | Not null |
 | reason | nvarchar(500) | Not null |
 | dateTimeOccurred | datetime2 | Not null |
 
@@ -111,7 +120,7 @@ Rows in AuditTrail will never be updated or deleted.
 
 **Stages:**
 
-Submitted, FormatVerification, Review, Approved, Rejected
+Submitted, Review, Approved, Rejected
 
 **Rules:**
 

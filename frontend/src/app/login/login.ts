@@ -52,13 +52,12 @@ export class Login {
 
     this.http.post('/api/admins/login', requestBody, { responseType: 'text' }).subscribe({
       next: (response) => {
-        console.log('Admin created successfully:', response);
-        alert('Successfully signed up! Please log in with your new credentials.');
-        this.router.navigate(['/']);
+        console.log('Admin logged in successfully:', response);
+        this.router.navigate(['/inputForm']);
       },
       error: (error) =>{
         console.error('Login failed:', error);
-        alert(error.status === 409 ? 'That username is already taken.' : 'Signup failed. Please try again.'); 
+        alert(error.status === 401 ? 'Invalid username or password.' : 'Login failed. Please try again.');
       }
     });
   }

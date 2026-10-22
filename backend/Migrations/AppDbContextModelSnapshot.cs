@@ -53,6 +53,11 @@ namespace backend.Api.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("RecId"));
 
+                    b.Property<string>("ATMessage")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<string>("CurrStatus")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -63,11 +68,6 @@ namespace backend.Api.Migrations
 
                     b.Property<DateTime>("DateTimeOccurred")
                         .HasColumnType("datetime2");
-
-                    b.Property<string>("Message")
-                        .IsRequired()
-                        .HasMaxLength(250)
-                        .HasColumnType("nvarchar(250)");
 
                     b.Property<string>("PrevStatus")
                         .IsRequired()
@@ -90,9 +90,9 @@ namespace backend.Api.Migrations
 
                     b.ToTable("AuditTrails", t =>
                         {
-                            t.HasCheckConstraint("CK_AuditCurrStatus", "CurrStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                            t.HasCheckConstraint("CK_AuditCurrStatus", "CurrStatus IN ('Submitted', 'Review', 'Approved', 'Rejected')");
 
-                            t.HasCheckConstraint("CK_AuditPrevStatus", "PrevStatus IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                            t.HasCheckConstraint("CK_AuditPrevStatus", "PrevStatus IN ('Submitted', 'Review', 'Approved', 'Rejected')");
                         });
                 });
 
@@ -224,7 +224,7 @@ namespace backend.Api.Migrations
                         {
                             t.HasCheckConstraint("CK_DecisionReason", "Reason IS NOT NULL AND LEN(Reason) > 0");
 
-                            t.HasCheckConstraint("CK_DecisionType", "DecisionType IN ('Approve', 'Deny')");
+                            t.HasCheckConstraint("CK_DecisionType", "DecisionType IN ('Approve', 'Reject')");
                         });
                 });
 
@@ -298,6 +298,10 @@ namespace backend.Api.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<string>("FirstApprovedBy")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
                     b.Property<int?>("JointCustomerId")
                         .HasColumnType("int");
 
@@ -305,7 +309,7 @@ namespace backend.Api.Migrations
                         .HasMaxLength(6)
                         .HasColumnType("varchar(6)");
 
-                    b.Property<string>("Status")
+                    b.Property<string>("TicketStatus")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
                         .HasMaxLength(20)
@@ -321,6 +325,8 @@ namespace backend.Api.Migrations
 
                     b.HasIndex("CustomerId");
 
+                    b.HasIndex("FirstApprovedBy");
+
                     b.HasIndex("JointCustomerId");
 
                     b.ToTable("Tickets", t =>
@@ -331,7 +337,7 @@ namespace backend.Api.Migrations
 
                             t.HasCheckConstraint("CK_RiskRating", "RiskRating IS NULL OR RiskRating IN ('Low', 'Medium', 'High')");
 
-                            t.HasCheckConstraint("CK_Status", "Status IN ('Submitted', 'FormatVerification', 'Review', 'Approved', 'Rejected')");
+                            t.HasCheckConstraint("CK_Status", "TicketStatus IN ('Submitted', 'Review', 'Approved', 'Rejected')");
 
                             t.HasCheckConstraint("CK_VerificationDeadline", "VerificationDeadline = DATEADD(DAY, 60, CreatedAt)");
                         });
@@ -376,7 +382,7 @@ namespace backend.Api.Migrations
                     b.Property<int>("TicketId")
                         .HasColumnType("int");
 
-                    b.Property<DateTime>("TimeStamp")
+                    b.Property<DateTime>("VRTimeStamp")
                         .HasColumnType("datetime2");
 
                     b.HasKey("VendorResponseId");
@@ -476,6 +482,12 @@ namespace backend.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Admins.Admin", "FirstApprovedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("FirstApprovedBy")
+                        .HasPrincipalKey("Username")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("Customers.Customer", "JointCustomer")
                         .WithMany()
                         .HasForeignKey("JointCustomerId")
@@ -484,6 +496,8 @@ namespace backend.Api.Migrations
                     b.Navigation("AssignedToAdmin");
 
                     b.Navigation("Customer");
+
+                    b.Navigation("FirstApprovedByAdmin");
 
                     b.Navigation("JointCustomer");
                 });

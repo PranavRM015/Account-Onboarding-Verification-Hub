@@ -26,7 +26,6 @@ namespace Admins
     {
         public void Configure(EntityTypeBuilder<Admin> builder)
         {
-            // Required so other tables (Tickets, Decisions) can reference Admins.Username as a foreign key.
             builder.HasAlternateKey(a => a.Username);
         }
     }

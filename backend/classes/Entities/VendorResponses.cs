@@ -33,7 +33,7 @@ namespace VendorResponses
         public int Score { get; set; }
         [MaxLength(200)]
         public string RiskCodes { get; set; } = string.Empty; // ex. DeceasedSSN, CorrectionalAddress
-        public DateTime TimeStamp { get; set; }
+        public DateTime VRTimeStamp { get; set; }
         private VendorResponse() { } // Used by EF Core for materialization
 
         public VendorResponse(int ticketId, string nameMatch, string dateOfBirthMatch, string addressMatch, string taxIdMatch, int score, string riskCodes)
@@ -45,7 +45,7 @@ namespace VendorResponses
             this.TaxIdMatch = taxIdMatch;
             this.Score = score;
             this.RiskCodes = riskCodes;
-            this.TimeStamp = DateTime.UtcNow;
+            this.VRTimeStamp = DateTime.UtcNow;
         }
     }
 

@@ -10,7 +10,7 @@ namespace Flags
 {
     public static class FlagValues
     {
-        public static readonly string[] ViolationTypes = { "VerificationFailed", "OfacMatch", "ProhibitedIndustry", "ClosedJurisdiction" };
+        public static readonly string[] ViolationTypes = {"VerificationFailed","OfacMatch", "ProhibitedIndustry", "ClosedJurisdiction" };
     }
 
     public class Flag
