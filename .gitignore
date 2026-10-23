@@ -11,3 +11,6 @@ obj/
 # Local settings and secrets
 appsettings.Local.json
 *.env
+
+# Angular build copied into the API for deployment
+backend/wwwroot/

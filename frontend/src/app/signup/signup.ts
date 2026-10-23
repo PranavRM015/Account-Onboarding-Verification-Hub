@@ -58,6 +58,11 @@ export class Signup {
       },
       error: (error) => {
         console.error('Signup failed:', error);
+        if (error.status === 401) {
+          alert('Only a logged-in admin can create a new admin. Please log in first.');
+          this.router.navigate(['/login']);
+          return;
+        }
         alert(error.status === 409 ? 'That username is already taken.' : 'Signup failed. Please try again.');
       }
     });

@@ -3,6 +3,35 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 
+// ISO 3166-1 alpha-2 codes (the database stores char(2)); the display names come from Intl.DisplayNames
+const isoCountryCodes = [
+  'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ',
+  'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ',
+  'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ',
+  'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ',
+  'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET',
+  'FI', 'FJ', 'FK', 'FM', 'FO', 'FR',
+  'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY',
+  'HK', 'HM', 'HN', 'HR', 'HT', 'HU',
+  'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR', 'IS', 'IT',
+  'JE', 'JM', 'JO', 'JP',
+  'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ',
+  'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY',
+  'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ',
+  'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ',
+  'OM',
+  'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY',
+  'QA',
+  'RE', 'RO', 'RS', 'RU', 'RW',
+  'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 'SX', 'SY', 'SZ',
+  'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ',
+  'UA', 'UG', 'UM', 'US', 'UY', 'UZ',
+  'VA', 'VC', 'VE', 'VG', 'VI', 'VN', 'VU',
+  'WF', 'WS',
+  'YE', 'YT',
+  'ZA', 'ZM', 'ZW',
+];
+
 @Component({
   imports: [FormsModule, ReactiveFormsModule],
   selector: 'app-form',
@@ -54,13 +83,22 @@ export class UserFormComponent {
     nonNullable: true,
     validators: [Validators.required],
   });
+  // 9 digits, dashes allowed (123-45-6789 or 12-3456789)
+  private readonly nineDigits: ValidatorFn = (control) =>
+    control.value && !/^\d{9}$/.test(String(control.value).replace(/-/g, '')) ? { taxIdFormat: true } : null;
+
   readonly taxIdNumber = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.pattern(/^[A-Za-z0-9-]{5,20}$/)],
+    validators: [Validators.required, this.nineDigits],
   });
+  // number street name, City, State/Province, ZIP code
   readonly residentialAddress = new FormControl('', {
     nonNullable: true,
-    validators: [Validators.required, Validators.maxLength(200)],
+    validators: [
+      Validators.required,
+      Validators.maxLength(200),
+      Validators.pattern(/^\d+[A-Za-z]?\s+[^,]+,\s*[^,]+,\s*[^,]+,\s*[A-Za-z0-9][A-Za-z0-9 -]{2,9}$/),
+    ],
   });
   readonly countryOfResidence = new FormControl('', {
     nonNullable: true,
@@ -107,10 +145,15 @@ export class UserFormComponent {
   });
 
   // Same pattern as the password/username hints in login: the template shows the modal when this matches.
-  activeModal: 'jointCustomer' | null = null;
+  activeModal: 'jointCustomer' | 'address' | null = null;
+  showTaxId = false;
 
   showModal(which: string): void {
-    this.activeModal = which as 'jointCustomer' | null;
+    this.activeModal = which as 'jointCustomer' | 'address' | null;
+  }
+
+  toggleTaxId(): void {
+    this.showTaxId = !this.showTaxId;
   }
 
   hideModal(): void {
@@ -129,39 +172,12 @@ export class UserFormComponent {
     });
   }
 
-  // ISO 3166-1 alpha-2 codes (the database stores char(2)); extend as needed
-  readonly countries = [
-    { code: 'US', name: 'United States' },
-    { code: 'CA', name: 'Canada' },
-    { code: 'MX', name: 'Mexico' },
-    { code: 'GB', name: 'United Kingdom' },
-    { code: 'IE', name: 'Ireland' },
-    { code: 'FR', name: 'France' },
-    { code: 'DE', name: 'Germany' },
-    { code: 'ES', name: 'Spain' },
-    { code: 'IT', name: 'Italy' },
-    { code: 'NL', name: 'Netherlands' },
-    { code: 'CH', name: 'Switzerland' },
-    { code: 'SE', name: 'Sweden' },
-    { code: 'IN', name: 'India' },
-    { code: 'CN', name: 'China' },
-    { code: 'JP', name: 'Japan' },
-    { code: 'KR', name: 'South Korea' },
-    { code: 'SG', name: 'Singapore' },
-    { code: 'PH', name: 'Philippines' },
-    { code: 'PK', name: 'Pakistan' },
-    { code: 'BD', name: 'Bangladesh' },
-    { code: 'AU', name: 'Australia' },
-    { code: 'NZ', name: 'New Zealand' },
-    { code: 'BR', name: 'Brazil' },
-    { code: 'AR', name: 'Argentina' },
-    { code: 'CO', name: 'Colombia' },
-    { code: 'NG', name: 'Nigeria' },
-    { code: 'ZA', name: 'South Africa' },
-    { code: 'EG', name: 'Egypt' },
-    { code: 'AE', name: 'United Arab Emirates' },
-    { code: 'SA', name: 'Saudi Arabia' },
-  ];
+  readonly countries = (() => {
+    const names = new Intl.DisplayNames(['en'], { type: 'region' });
+    return isoCountryCodes
+      .map((code) => ({ code, name: names.of(code) ?? code }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  })();
 
   private http = inject(HttpClient);
   private router = inject(Router);
@@ -222,12 +238,11 @@ export class UserFormComponent {
   }
 
   private saveCustomer(requestBody: object): void {
-    this.http.post<{ customerId: number }>('/api/admins/inputForm', requestBody).subscribe({
+    this.http.post<{ customerId: number; ticketId: number }>('/api/admins/inputForm', requestBody).subscribe({
       next: (response) => {
         console.log('Customer saved successfully:', response);
-        alert(`Submitted successfully. This customer's ID is ${response.customerId}. ` +
-          'Use it as the Joint Customer ID if they are a joint account holder.');
         this.userForm.reset();
+        this.router.navigate(['/review', response.ticketId]);
       },
       error: (error) => this.handleError(error),
     });

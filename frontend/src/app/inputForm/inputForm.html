@@ -83,13 +83,37 @@
             }
 
             <div class="fields">
+            <div class="taxid-container">
             <label for="taxIdNumber">Tax ID Number:</label>
-            <input type="text" id="taxIdNumber" name="taxIdNumber" formControlName="taxIdNumber" placeholder="Enter your tax ID number" autocomplete="off" pattern="[A-Za-z0-9\-]{5,20}" required>
+            <input [type]="showTaxId ? 'text' : 'password'" id="taxIdNumber" name="taxIdNumber" formControlName="taxIdNumber" placeholder="Enter your tax ID number" autocomplete="off" required>
+            <button type="button" (click)="toggleTaxId()">{{ showTaxId ? 'Hide' : 'Show' }}</button>
+            @if (taxIdNumber.errors?.['taxIdFormat'] && taxIdNumber.touched) {
+            <span class="error">Enter exactly 9 digits (dashes allowed).</span>
+            }
+            </div>
             </div>
 
             <div class="fields">
+            <div class="address-container">
             <label for="residentialAddress">Residential Address:</label>
-            <input type="text" id="residentialAddress" name="residentialAddress" formControlName="residentialAddress" placeholder="Enter your residential address" required>
+            <input type="text" id="residentialAddress" name="residentialAddress" formControlName="residentialAddress"
+            placeholder="1633 Main Street, Springfield, IL, 62701"
+            (focus)="showModal('address')"
+            (blur)="hideModal()" required>
+
+            <div id="addressModal" class="modal" [class.show]="activeModal === 'address'">
+            <div class="modal-content">
+                <ul class="modal-text">
+                    <li><strong>Address format:</strong></li>
+                    <li>number street name, City, State/Province, ZIP code</li>
+                    <li>Example: 1633 Main Street, Springfield, IL, 62701</li>
+                </ul>
+            </div>
+            </div>
+            @if (residentialAddress.errors?.['pattern'] && residentialAddress.touched) {
+            <span class="error">Use the format: number street name, City, State/Province, ZIP code.</span>
+            }
+            </div>
             </div>
 
             <div class="fields">

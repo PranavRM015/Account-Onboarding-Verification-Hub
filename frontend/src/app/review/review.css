@@ -1,0 +1,135 @@
+.page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.box {
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin: 15px 0;
+}
+
+.box h2 {
+    margin-top: 0;
+}
+
+.rating.high {
+    color: #ff6b6b;
+}
+
+.rating.medium {
+    color: #ffd166;
+}
+
+.rating.low {
+    color: #7bd88f;
+}
+
+.flag {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    border-top: 1px solid #555555;
+    padding: 10px 0;
+}
+
+.flag:first-of-type {
+    border-top: none;
+}
+
+.flag-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.flag.cleared .flag-text strong {
+    text-decoration: line-through;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 15px 0;
+}
+
+.hint {
+    color: #ffd166;
+    margin: 0;
+}
+
+.error {
+    color: #ff6b6b;
+}
+
+.notice {
+    color: #7bd88f;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    box-sizing: border-box;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    text-align: left;
+}
+
+.modal.show {
+    display: flex;
+}
+
+.modal-content{
+    background-color: #b1b1b1;
+    padding: 20px;
+    border: 1px black;
+    border-radius: 6px;
+    width: 420px;
+    max-width: 90%;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    text-align: left;
+
+}
+
+.modal-title{
+    color:black;
+    font-family: Arial, sans-serif;
+    margin: 0%;
+    padding-bottom: 10px;
+}
+
+.modal-text{
+    color:black;
+    font-family: Arial, sans-serif;
+    margin: 0%;
+    padding-bottom: 6px;
+}
+
+.modal-content textarea {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.counter {
+    text-align: right;
+    font-size: 80%;
+}
+
+.modal-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}

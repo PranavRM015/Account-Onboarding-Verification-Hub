@@ -7,10 +7,9 @@
 .modal {
     display: none;
     position: absolute;
+    box-sizing: border-box;
     top: calc(100% + 8px);
     left: 0px;
-    height: 260px;
-    width: 70px;
     z-index: 1000;
     background-color: rgba(0,0,0,0.5);
     text-align: left;

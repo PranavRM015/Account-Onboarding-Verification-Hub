@@ -5,6 +5,8 @@ import { Signup } from './signup/signup';
 import { Login } from './login/login';
 import { Submit } from './submit/submit';
 import { UserFormComponent } from './inputForm/inputForm';
+import { Review } from './review/review';
+import { Result } from './result/result';
 
 export const routes: Routes = [
   { path: '', component: Home },
@@ -12,6 +14,8 @@ export const routes: Routes = [
   { path: 'login', component: Login },
   { path: 'submit', component: Submit },
   { path: 'inputForm', component: UserFormComponent },
+  { path: 'review/:ticketId', component: Review },
+  { path: 'result/:ticketId', component: Result },
 ];
 
 @Component({

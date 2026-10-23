@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using TicketDtos;
 
 namespace ReviewControlNamespace
 {
@@ -140,30 +141,79 @@ namespace ReviewControlNamespace
                 {
                     return NotFound("That ticket does not exist.");
                 }
-                var flags = _db.Flags.AsNoTracking().Where(f => f.TicketId == ticketId)
-                    .Select(f => new
+                var customer = _db.Customers.AsNoTracking()
+                    .Where(c => c.CustomerId == ticket.CustomerId)
+                    .Select(c => new CustomerDetailsDto
                     {
-                        f.FlagId, f.ViolationType, f.RaisedAt,
-                        Cleared = f.ClearedAt != null,f.ClearedAt,
-                        ClearedBy = f.ClearedByAdmin != null ? f.ClearedByAdmin.Username : null,f.ClearedReason,
+                        FirstName = c.FirstName,
+                        MiddleName = c.MiddleName,
+                        LastName = c.LastName,
+                        DateOfBirth = c.DateOfBirth,
+                        Gender = c.Gender,
+                        TaxIdType = c.TaxIdType,
+                        ResidentialAddress = c.ResidentialAddress,
+                        CountryOfResidence = c.CountryOfResidence,
+                        CountryOfCitizenship = c.CountryOfCitizenship,
+                        Occupation = c.Occupation,
+                        Employer = c.Employer,
+                    })
+                    .First();
+                var jointCustomerName = ticket.JointCustomerId is null ? null : _db.Customers.AsNoTracking()
+                    .Where(c => c.CustomerId == ticket.JointCustomerId)
+                    .Select(c => c.FirstName + " " + c.LastName)
+                    .FirstOrDefault();
+                var flags = _db.Flags.AsNoTracking().Where(f => f.TicketId == ticketId)
+                    .Select(f => new FlagDto
+                    {
+                        FlagId = f.FlagId,
+                        ViolationType = f.ViolationType,
+                        RaisedAt = f.RaisedAt,
+                        Cleared = f.ClearedAt != null,
+                        ClearedAt = f.ClearedAt,
+                        ClearedBy = f.ClearedByAdmin != null ? f.ClearedByAdmin.Username : null,
+                        ClearedReason = f.ClearedReason,
                     })
                     .ToList();
                 var vendorResponse = _db.VendorResponses.AsNoTracking()
                     .Where(v => v.TicketId == ticketId).OrderByDescending(v => v.VRTimeStamp)
-                    .Select(v => new { v.NameMatch, v.DateOfBirthMatch, v.AddressMatch, v.TaxIdMatch, v.Score, v.RiskCodes, v.VRTimeStamp })
+                    .Select(v => new VendorResponseDto
+                    {
+                        NameMatch = v.NameMatch,
+                        DateOfBirthMatch = v.DateOfBirthMatch,
+                        AddressMatch = v.AddressMatch,
+                        TaxIdMatch = v.TaxIdMatch,
+                        Score = v.Score,
+                        RiskCodes = v.RiskCodes,
+                        VRTimeStamp = v.VRTimeStamp,
+                    })
                     .FirstOrDefault();
                 var decision = _db.Decisions.AsNoTracking()
-                    .Where(d => d.TicketId == ticketId).Select(d => new { d.DecisionType, d.DecidedBy, d.Reason, d.DecidedAt })
+                    .Where(d => d.TicketId == ticketId)
+                    .Select(d => new DecisionDto
+                    {
+                        DecisionType = d.DecisionType,
+                        DecidedBy = d.DecidedBy,
+                        Reason = d.Reason,
+                        DecidedAt = d.DecidedAt,
+                    })
                     .FirstOrDefault();
-                return Ok(new
+                return Ok(new TicketDetailsDto
                 {
-                    ticket.TicketId,ticket.CustomerId,ticket.TicketStatus,
-                    ticket.RiskRating,ticket.AccountType,
-                    ticket.CreatedAt,ticket.VerificationDeadline,
-                    ticket.AssignedTo,
-                    ticket.FirstApprovedBy,
-                    verified = flags.Count == 0,
-                    flags, vendorResponse,decision,
+                    TicketId = ticket.TicketId,
+                    CustomerId = ticket.CustomerId,
+                    TicketStatus = ticket.TicketStatus,
+                    RiskRating = ticket.RiskRating,
+                    AccountType = ticket.AccountType,
+                    CreatedAt = ticket.CreatedAt,
+                    VerificationDeadline = ticket.VerificationDeadline,
+                    AssignedTo = ticket.AssignedTo,
+                    FirstApprovedBy = ticket.FirstApprovedBy,
+                    Verified = flags.Count == 0,
+                    Customer = customer,
+                    JointCustomerName = jointCustomerName,
+                    Flags = flags,
+                    VendorResponse = vendorResponse,
+                    Decision = decision,
                 });
             }
             catch (Exception ex)

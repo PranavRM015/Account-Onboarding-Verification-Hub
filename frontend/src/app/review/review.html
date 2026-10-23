@@ -1,0 +1,114 @@
+<div class="page">
+    <h1>Review ticket</h1>
+
+    @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+    }
+    @if (notice()) {
+    <p class="notice">{{ notice() }}</p>
+    }
+
+    @if (ticket(); as t) {
+    <section class="box">
+        <h2>Ticket {{ t.ticketId }}</h2>
+        <p>Status: <strong>{{ t.ticketStatus }}</strong></p>
+        <p>Customer ID: <strong>{{ t.customerId }}</strong> (use this ID as the Joint Customer ID for a second holder)</p>
+        <p>Account type: {{ t.accountType }}</p>
+        @if (t.jointCustomerName) {
+        <p>Joint holder: {{ t.jointCustomerName }}</p>
+        }
+        <p>
+            Risk rating:
+            <strong class="rating" [class.high]="t.riskRating === 'High'" [class.medium]="t.riskRating === 'Medium'" [class.low]="t.riskRating === 'Low'">
+                {{ t.riskRating ?? 'Not rated' }}
+            </strong>
+        </p>
+        <p>Must be resolved by: {{ t.verificationDeadline | date: 'mediumDate' }}</p>
+        @if (t.firstApprovedBy) {
+        <p>First approval by <strong>{{ t.firstApprovedBy }}</strong>. A different reviewer must give the second approval.</p>
+        }
+    </section>
+
+    <section class="box">
+        <h2>Customer</h2>
+        <p>First name: {{ t.customer.firstName }}</p>
+        <p>Middle name: {{ t.customer.middleName || 'None' }}</p>
+        <p>Last name: {{ t.customer.lastName }}</p>
+        <p>Date of birth: {{ t.customer.dateOfBirth | date: 'longDate' }}</p>
+        <p>Gender: {{ t.customer.gender }}</p>
+        <p>Tax ID type: {{ t.customer.taxIdType }}</p>
+        <p>Residential address: {{ t.customer.residentialAddress }}</p>
+        <p>Country of residence: {{ t.customer.countryOfResidence }}</p>
+        <p>Country of citizenship: {{ t.customer.countryOfCitizenship }}</p>
+        <p>Occupation: {{ t.customer.occupation }}</p>
+        <p>Employer: {{ t.customer.employer }}</p>
+    </section>
+
+    <section class="box">
+        <h2>Identity verification</h2>
+        @if (t.vendorResponse; as v) {
+        <p>Vendor score: <strong>{{ v.score }}</strong> out of 50</p>
+        <p>Name: {{ v.nameMatch }} | Date of birth: {{ v.dateOfBirthMatch }} | Address: {{ v.addressMatch }} | Tax ID: {{ v.taxIdMatch }}</p>
+        @if (riskCodeList(v.riskCodes).length > 0) {
+        <ul>
+            @for (code of riskCodeList(v.riskCodes); track code) {
+            <li>{{ riskCodeLabel(code) }}</li>
+            }
+        </ul>
+        } @else {
+        <p>The vendor returned no risk codes.</p>
+        }
+        } @else {
+        <p>There is no vendor response on record.</p>
+        }
+    </section>
+
+    <section class="box">
+        <h2>Flags</h2>
+        @if (t.flags.length === 0) {
+        <p>No flags were raised.</p>
+        }
+        @for (flag of t.flags; track flag.flagId) {
+        <div class="flag" [class.cleared]="flag.cleared">
+            <div class="flag-text">
+                <strong>{{ flagLabel(flag.violationType) }}</strong>
+                <span>Raised {{ flag.raisedAt | date: 'medium' }}</span>
+                @if (flag.cleared) {
+                <span>Cleared by {{ flag.clearedBy }} on {{ flag.clearedAt | date: 'medium' }}: {{ flag.clearedReason }}</span>
+                }
+            </div>
+            @if (!flag.cleared && t.ticketStatus === 'Review') {
+            <button type="button" (click)="openAction('clear', flag.flagId)">Clear</button>
+            }
+        </div>
+        }
+    </section>
+
+    @if (t.ticketStatus === 'Review') {
+    <section class="actions">
+        <button type="button" (click)="openAction('approve')" [disabled]="!canApprove()">Approve</button>
+        <button type="button" (click)="openAction('reject')">Reject</button>
+        @if (hasUnclearedFlags()) {
+        <p class="hint">Clear every flag before approving.</p>
+        }
+    </section>
+    } @else {
+    <section class="actions">
+        <a [routerLink]="['/result', t.ticketId]">View the result</a>
+    </section>
+    }
+    }
+
+    <div id="reasonModal" class="modal" [class.show]="action() !== null">
+        <div class="modal-content" role="dialog" aria-modal="true">
+            <h2 class="modal-title">{{ modalTitle() }}</h2>
+            <label class="modal-text" for="reason">Reason (required, up to 500 characters):</label>
+            <textarea id="reason" rows="5" maxlength="500" [formControl]="reason"></textarea>
+            <p class="modal-text counter">{{ reason.value.length }} / 500</p>
+            <div class="modal-buttons">
+                <button type="button" (click)="closeModal()">Cancel</button>
+                <button type="button" (click)="confirm()" [disabled]="reason.invalid || submitting()">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>

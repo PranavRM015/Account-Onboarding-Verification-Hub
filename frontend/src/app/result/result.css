@@ -1,0 +1,55 @@
+.page {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+.box {
+    border: 2px solid #ffffff;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin: 15px 0;
+}
+
+.box h2 {
+    margin-top: 0;
+}
+
+.accepted h2 {
+    color: #7bd88f;
+}
+
+.rejected h2 {
+    color: #ff6b6b;
+}
+
+.pending h2 {
+    color: #ffd166;
+}
+
+.rating.high {
+    color: #ff6b6b;
+}
+
+.rating.medium {
+    color: #ffd166;
+}
+
+.rating.low {
+    color: #7bd88f;
+}
+
+.actions {
+    display: flex;
+    gap: 20px;
+    margin: 15px 0;
+}
+
+.actions a {
+    color: #ffffff;
+}
+
+.error {
+    color: #ff6b6b;
+}

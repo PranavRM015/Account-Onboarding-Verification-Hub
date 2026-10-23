@@ -1,0 +1,94 @@
+<div class="page">
+    <h1>Verification result</h1>
+
+    @if (errorMessage()) {
+    <p class="error" role="alert">{{ errorMessage() }}</p>
+    }
+
+    @if (ticket(); as t) {
+    <p>{{ customerName(t) }} (customer {{ t.customerId }}, ticket {{ t.ticketId }})</p>
+
+    @switch (t.ticketStatus) {
+    @case ('Approved') {
+    <section class="box accepted">
+        <h2>Accepted</h2>
+        <p>This customer has been accepted.</p>
+        @if (t.decision; as d) {
+        <p>Approved by <strong>{{ d.decidedBy }}</strong> on {{ d.decidedAt | date: 'medium' }}.</p>
+        <p>Reason: {{ d.reason }}</p>
+        }
+        @if (t.firstApprovedBy) {
+        <p>First approval by <strong>{{ t.firstApprovedBy }}</strong>.</p>
+        }
+    </section>
+    }
+    @case ('Rejected') {
+    <section class="box rejected">
+        <h2>Rejected</h2>
+        @if (t.decision; as d) {
+        @if (rejectedBySystem()) {
+        <p>This customer was rejected automatically because the ticket was not resolved within 60 days.</p>
+        } @else {
+        <p>Rejected by <strong>{{ d.decidedBy }}</strong> on {{ d.decidedAt | date: 'medium' }}.</p>
+        }
+        <p>Reason: {{ d.reason }}</p>
+        } @else {
+        <p>No reason is on record for this rejection.</p>
+        }
+    </section>
+    }
+    @default {
+    <section class="box pending">
+        <h2>Still under review</h2>
+        <p>No final decision has been made yet.</p>
+        @if (unclearedCount() > 0) {
+        <p>{{ unclearedCount() }} flag(s) still need to be cleared.</p>
+        }
+        @if (t.firstApprovedBy) {
+        <p>First approval by <strong>{{ t.firstApprovedBy }}</strong>. A different reviewer must give the second approval.</p>
+        }
+        <p>Must be resolved by {{ t.verificationDeadline | date: 'mediumDate' }}.</p>
+    </section>
+    }
+    }
+
+    <section class="box">
+        <h2>What the checks found</h2>
+        <p>
+            Risk rating:
+            <strong class="rating" [class.high]="t.riskRating === 'High'" [class.medium]="t.riskRating === 'Medium'" [class.low]="t.riskRating === 'Low'">
+                {{ t.riskRating ?? 'Not rated' }}
+            </strong>
+        </p>
+        @if (t.vendorResponse; as v) {
+        <p>Vendor score: <strong>{{ v.score }}</strong> out of 50</p>
+        @for (code of riskCodeList(v.riskCodes); track code) {
+        <p>{{ riskCodeLabel(code) }}</p>
+        }
+        }
+        @if (t.flags.length === 0) {
+        <p>All checks passed. No flags were raised.</p>
+        } @else {
+        <ul>
+            @for (flag of t.flags; track flag.flagId) {
+            <li>
+                {{ flagLabel(flag.violationType) }}
+                @if (flag.cleared) {
+                (cleared by {{ flag.clearedBy }}: {{ flag.clearedReason }})
+                } @else {
+                (not cleared)
+                }
+            </li>
+            }
+        </ul>
+        }
+    </section>
+
+    <section class="actions">
+        @if (t.ticketStatus === 'Review') {
+        <a [routerLink]="['/review', t.ticketId]">Back to review</a>
+        }
+        <a routerLink="/inputForm">Submit another customer</a>
+    </section>
+    }
+</div>

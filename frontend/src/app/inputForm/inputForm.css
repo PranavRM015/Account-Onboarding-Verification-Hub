@@ -1,6 +1,13 @@
+.my-box {
+    width: 520px;
+    height: auto;
+}
+
 .username-container,
 .password-container,
-.joint-container {
+.joint-container,
+.taxid-container,
+.address-container {
     position: relative;
     display: inline-block;
 }
@@ -53,6 +60,11 @@
 .joint-container .modal {
     height: auto;
     width: 240px;
+}
+
+.address-container .modal {
+    height: auto;
+    width: 300px;
 }
 
 .error {

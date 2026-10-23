@@ -42,6 +42,7 @@ namespace AdminControlNamespace
         public int? jointCustomerId { get; set; }
     }
     [ApiController]
+    [Authorize]
     [Route("api/admins")]
     public class AdminSignupController : ControllerBase
     {
