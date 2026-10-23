@@ -136,7 +136,7 @@ Submitted, Review, Approved, Rejected
 - Accounts based in the USA and Mexico are in the open tier and will be accepted. Everything else will be in the closed tier. This rule is applied to the customer's country of residence.
 - A ticket cannot be approved until every flag on it has been cleared.
 - High risk tickets will need a second approval from a different reviewer than the one who gave the first approval.
-- If a ticket is not resolved within 60 days, it will be moved to Rejected. A stored procedure that runs on a daily schedule does this: it sets the status to Rejected, records a decision by the system account with the reason "Not resolved within 60 days", and writes an audit row.
+- If a ticket is not resolved within 60 days, it should be moved to Rejected. A stored procedure does this: it sets the status to Rejected, records a decision by the system account with the reason "Not resolved within 60 days", and writes an audit row. This is run locally and would be incorporated in Azure via a Logic App.
 
 The risk rating is the highest level reached by any flag on the ticket. An OfacMatch or ProhibitedIndustry flag makes it High, a ClosedJurisdiction or VerificationFailed flag makes it Medium, and a ticket with no flags is Low.
 
@@ -147,13 +147,3 @@ Backend: the `backend.Tests` project uses xUnit and currently has 20 tests of th
 Not yet covered: integration tests for the status transitions (approve, reject, clear a flag, the second approval on High risk tickets, and the 60-day rejection), and tests of the stored procedure.
 
 Frontend: Jasmine/Karma spec files exist for the signup, login and input form components. They have not been updated for the review and result pages or the new form rules, and the review and result pages have no specs yet.
-
-Seed data: tickets that each trigger one specific flag have not been created. To check each flag by hand, submit a customer with:
-
-| Flag | What to enter |
-|---|---|
-| VerificationFailed (DeceasedSSN) | A tax ID ending in 0000, 6666 or 9999 |
-| VerificationFailed (CorrectionalAddress) | An address containing "State Prison" |
-| OfacMatch | A name from `backend/OFACNames.csv`, such as James Robert Anderson |
-| ProhibitedIndustry | An occupation or employer containing a word like "Cannabis" or "Dispensary" |
-| ClosedJurisdiction | A country of residence other than the USA or Mexico |

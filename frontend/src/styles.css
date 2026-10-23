@@ -23,6 +23,10 @@ html, body {
   display: flex;
   flex-direction: column;
   align-items: center;
+  flex: 0 0 auto;
+}
+.choice button{
+  white-space: nowrap;
 }
 .my-box{
   width: 300px;
