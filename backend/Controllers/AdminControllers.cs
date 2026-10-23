@@ -56,6 +56,7 @@ namespace AdminControlNamespace
             _logger = logger;
         }
 
+        [AllowAnonymous]
         [HttpPost("signup")]
         public IActionResult CreateAdmin([FromBody] information info)
         {

@@ -65,9 +65,10 @@ public class Program
         CreateFirstAdmin(app);
 
         app.UseForwardedHeaders();
-        app.UseCors("MyCorsPolicy");
         app.UseDefaultFiles();
         app.UseStaticFiles();
+        app.UseRouting();
+        app.UseCors("MyCorsPolicy");
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
@@ -76,7 +77,7 @@ public class Program
         app.Run();
     }
 
-    // Signup needs a logged-in admin, so a brand new database gets its first admin from BootstrapAdmin:Username and BootstrapAdmin:Password.
+    // A brand new database can get its first admin from BootstrapAdmin:Username and BootstrapAdmin:Password.
     private static void CreateFirstAdmin(WebApplication app)
     {
         var username = app.Configuration["BootstrapAdmin:Username"]?.Trim();

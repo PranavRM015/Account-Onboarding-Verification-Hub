@@ -142,6 +142,18 @@ The risk rating is the highest level reached by any flag on the ticket. An OfacM
 
 **Testing:**
 
-xUnit tests will be implemented to ensure each rule is fulfilled.
-Integration tests are to be used for status transitions.
-Seed data will include tickets that each trigger one specific flag.
+Backend: the `backend.Tests` project uses xUnit and currently has 20 tests of the vendor logic. They cover the country tiers (US and MX open, everything else closed), the cannabis keywords in occupation and employer, matching against the OFAC list (case, blank middle names, the header row), the vendor check for a deceased SSN and a correctional facility address, and the risk rating (no flags is Low, the highest flag wins). They need no database. Run them from the repository root with `dotnet test backend.Tests`.
+
+Not yet covered: integration tests for the status transitions (approve, reject, clear a flag, the second approval on High risk tickets, and the 60-day rejection), and tests of the stored procedure.
+
+Frontend: Jasmine/Karma spec files exist for the signup, login and input form components. They have not been updated for the review and result pages or the new form rules, and the review and result pages have no specs yet.
+
+Seed data: tickets that each trigger one specific flag have not been created. To check each flag by hand, submit a customer with:
+
+| Flag | What to enter |
+|---|---|
+| VerificationFailed (DeceasedSSN) | A tax ID ending in 0000, 6666 or 9999 |
+| VerificationFailed (CorrectionalAddress) | An address containing "State Prison" |
+| OfacMatch | A name from `backend/OFACNames.csv`, such as James Robert Anderson |
+| ProhibitedIndustry | An occupation or employer containing a word like "Cannabis" or "Dispensary" |
+| ClosedJurisdiction | A country of residence other than the USA or Mexico |

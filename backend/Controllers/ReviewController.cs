@@ -74,7 +74,6 @@ namespace ReviewControlNamespace
                 using var transaction = _db.Database.BeginTransaction();
 
                 if (_db.Flags.Any(f => f.TicketId == ticketId && f.ClearedAt == null))
-
                 {
                     return Conflict("Every flag on the ticket must be cleared before it can be approved.");
                 }

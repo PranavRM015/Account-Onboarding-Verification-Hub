@@ -1,0 +1,247 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 2800 2080" width="2800" height="2080" font-family="Segoe UI, Arial, sans-serif">
+<rect width="2800" height="2080" fill="#ffffff"/>
+<style>text{fill:#111;font-size:20px;text-anchor:middle;dominant-baseline:central}.e{font-size:27px;font-weight:700}.r{font-size:19px;font-weight:600}.c{font-size:34px;font-weight:700;fill:#b00020}.t{font-size:44px;font-weight:700}.pk{text-decoration:underline}.uq{text-decoration:underline;text-decoration-style:dashed}</style>
+<text class="t" x="1400.0" y="2035">Verification Hub DB — Entity Relationship Diagram (Chen notation)</text>
+<line x1="475.0" y1="905.0" x2="160.0" y2="590" stroke="#444" stroke-width="2"/>
+<line x1="505.0" y1="905.0" x2="400.0" y2="590" stroke="#444" stroke-width="2"/>
+<line x1="535.0" y1="905.0" x2="640.0" y2="590" stroke="#444" stroke-width="2"/>
+<line x1="565.0" y1="905.0" x2="880.0" y2="590" stroke="#444" stroke-width="2"/>
+<line x1="455.0" y1="905.0" x2="130" y2="680.0" stroke="#444" stroke-width="2"/>
+<line x1="436.4" y1="905.0" x2="130" y2="740.0" stroke="#444" stroke-width="2"/>
+<line x1="403.0" y1="905.0" x2="130" y2="800.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="920.0" x2="130" y2="860.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="940.0" x2="130" y2="920.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="960.0" x2="130" y2="980.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="980.0" x2="130" y2="1040.0" stroke="#444" stroke-width="2"/>
+<line x1="403.0" y1="995.0" x2="130" y2="1100.0" stroke="#444" stroke-width="2"/>
+<line x1="436.4" y1="995.0" x2="130" y2="1160.0" stroke="#444" stroke-width="2"/>
+<line x1="455.0" y1="995.0" x2="130" y2="1220.0" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="928.0" x2="2670" y2="884.0" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="950.0" x2="2670" y2="950.0" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="972.0" x2="2670" y2="1016.0" stroke="#444" stroke-width="2"/>
+<line x1="1270.0" y1="186.7" x2="920.0" y2="70" stroke="#444" stroke-width="2"/>
+<line x1="1332.5" y1="185.0" x2="1160.0" y2="70" stroke="#444" stroke-width="2"/>
+<line x1="1400.0" y1="185.0" x2="1400.0" y2="70" stroke="#444" stroke-width="2"/>
+<line x1="1467.5" y1="185.0" x2="1640.0" y2="70" stroke="#444" stroke-width="2"/>
+<line x1="1530.0" y1="186.7" x2="1880.0" y2="70" stroke="#444" stroke-width="2"/>
+<line x1="1270.0" y1="1731.0" x2="560.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1270.0" y1="1743.3" x2="800.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1319.0" y1="1745.0" x2="1040.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1373.0" y1="1745.0" x2="1280.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1427.0" y1="1745.0" x2="1520.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1481.0" y1="1745.0" x2="1760.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1530.0" y1="1743.3" x2="2000.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="1530.0" y1="1731.0" x2="2240.0" y2="1900" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="1667.0" x2="2670" y2="1601.0" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="1689.0" x2="2670" y2="1667.0" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="1711.0" x2="2670" y2="1733.0" stroke="#444" stroke-width="2"/>
+<line x1="2410.0" y1="1733.0" x2="2670" y2="1799.0" stroke="#444" stroke-width="2"/>
+<line x1="406.8" y1="1655.0" x2="130" y2="1545.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="1669.0" x2="130" y2="1607.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="1689.7" x2="130" y2="1669.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="1710.3" x2="130" y2="1731.0" stroke="#444" stroke-width="2"/>
+<line x1="390.0" y1="1731.0" x2="130" y2="1793.0" stroke="#444" stroke-width="2"/>
+<line x1="406.8" y1="1745.0" x2="130" y2="1855.0" stroke="#444" stroke-width="2"/>
+<line x1="1275.0" y1="905.0" x2="900" y2="770" stroke="#444" stroke-width="2"/>
+<line x1="1335.0" y1="905.0" x2="1140" y2="770" stroke="#444" stroke-width="2"/>
+<line x1="1332.9" y1="905.0" x2="1020" y2="695" stroke="#444" stroke-width="2"/>
+<line x1="1375.3" y1="905.0" x2="1260" y2="695" stroke="#444" stroke-width="2"/>
+<line x1="1525.0" y1="905.0" x2="1900" y2="770" stroke="#444" stroke-width="2"/>
+<line x1="1465.0" y1="905.0" x2="1660" y2="770" stroke="#444" stroke-width="2"/>
+<line x1="1467.1" y1="905.0" x2="1780" y2="695" stroke="#444" stroke-width="2"/>
+<line x1="520" y1="950" x2="960" y2="865" stroke="#111" stroke-width="3"/>
+<line x1="960" y1="865" x2="1400" y2="950" stroke="#111" stroke-width="9"/>
+<line x1="960" y1="865" x2="1400" y2="950" stroke="#fff" stroke-width="3.5"/>
+<line x1="520" y1="950" x2="960" y2="1035" stroke="#111" stroke-width="3"/>
+<line x1="960" y1="1035" x2="1400" y2="950" stroke="#111" stroke-width="3"/>
+<line x1="2280" y1="950" x2="1840" y2="865" stroke="#111" stroke-width="3"/>
+<line x1="1840" y1="865" x2="1400" y2="950" stroke="#111" stroke-width="9"/>
+<line x1="1840" y1="865" x2="1400" y2="950" stroke="#fff" stroke-width="3.5"/>
+<line x1="2280" y1="950" x2="1840" y2="1035" stroke="#111" stroke-width="3"/>
+<line x1="1840" y1="1035" x2="1400" y2="950" stroke="#111" stroke-width="3"/>
+<line x1="1400" y1="950" x2="1400" y2="560" stroke="#111" stroke-width="3"/>
+<line x1="1400" y1="560" x2="1400" y2="230" stroke="#111" stroke-width="9"/>
+<line x1="1400" y1="560" x2="1400" y2="230" stroke="#fff" stroke-width="3.5"/>
+<line x1="2280" y1="950" x2="1900" y2="190" stroke="#111" stroke-width="3"/>
+<line x1="1900" y1="190" x2="1400" y2="230" stroke="#111" stroke-width="3"/>
+<line x1="2280" y1="950" x2="1760" y2="410" stroke="#111" stroke-width="3"/>
+<line x1="1760" y1="410" x2="1400" y2="230" stroke="#111" stroke-width="3"/>
+<line x1="1400" y1="950" x2="1400" y2="1330" stroke="#111" stroke-width="3"/>
+<line x1="1400" y1="1330" x2="1400" y2="1700" stroke="#111" stroke-width="9"/>
+<line x1="1400" y1="1330" x2="1400" y2="1700" stroke="#fff" stroke-width="3.5"/>
+<line x1="1400" y1="950" x2="1840" y2="1330" stroke="#111" stroke-width="3"/>
+<line x1="1840" y1="1330" x2="2280" y2="1700" stroke="#111" stroke-width="9"/>
+<line x1="1840" y1="1330" x2="2280" y2="1700" stroke="#fff" stroke-width="3.5"/>
+<line x1="2280" y1="950" x2="2280" y2="1330" stroke="#111" stroke-width="3"/>
+<line x1="2280" y1="1330" x2="2280" y2="1700" stroke="#111" stroke-width="9"/>
+<line x1="2280" y1="1330" x2="2280" y2="1700" stroke="#fff" stroke-width="3.5"/>
+<line x1="1400" y1="950" x2="960" y2="1330" stroke="#111" stroke-width="3"/>
+<line x1="960" y1="1330" x2="520" y2="1700" stroke="#111" stroke-width="9"/>
+<line x1="960" y1="1330" x2="520" y2="1700" stroke="#fff" stroke-width="3.5"/>
+<line x1="520" y1="950" x2="520" y2="1330" stroke="#111" stroke-width="3"/>
+<line x1="520" y1="1330" x2="520" y2="1700" stroke="#111" stroke-width="9"/>
+<line x1="520" y1="1330" x2="520" y2="1700" stroke="#fff" stroke-width="3.5"/>
+<ellipse cx="160.0" cy="590" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="160.0" y="590" class="pk">CustomerId</text>
+<ellipse cx="400.0" cy="590" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="400.0" y="590">FirstName</text>
+<ellipse cx="640.0" cy="590" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="640.0" y="590">MiddleName</text>
+<ellipse cx="880.0" cy="590" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="880.0" y="590">LastName</text>
+<ellipse cx="130" cy="680.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="680.0">DateOfBirth</text>
+<ellipse cx="130" cy="740.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="740.0">Gender</text>
+<ellipse cx="130" cy="800.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="800.0">CountryOfCitizenship</text>
+<ellipse cx="130" cy="860.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="860.0">CountryOfResidence</text>
+<ellipse cx="130" cy="920.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="920.0">ResidentialAddress</text>
+<ellipse cx="130" cy="980.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="980.0">Employer</text>
+<ellipse cx="130" cy="1040.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1040.0">Occupation</text>
+<ellipse cx="130" cy="1100.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1100.0">TaxIdType</text>
+<ellipse cx="130" cy="1160.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1160.0" class="uq">TaxIdHash</text>
+<ellipse cx="130" cy="1220.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1220.0">TaxIdLastFourDigits</text>
+<ellipse cx="2670" cy="884.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="884.0" class="pk">AdminId</text>
+<ellipse cx="2670" cy="950.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="950.0" class="uq">Username</text>
+<ellipse cx="2670" cy="1016.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="1016.0">PasswordHash</text>
+<ellipse cx="920.0" cy="70" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="920.0" y="70" class="pk">FlagId</text>
+<ellipse cx="1160.0" cy="70" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1160.0" y="70">ViolationType</text>
+<ellipse cx="1400.0" cy="70" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1400.0" y="70">RaisedAt</text>
+<ellipse cx="1640.0" cy="70" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1640.0" y="70">ClearedAt</text>
+<ellipse cx="1880.0" cy="70" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1880.0" y="70">ClearedReason</text>
+<ellipse cx="560.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="560.0" y="1900" class="pk">VendorResponseId</text>
+<ellipse cx="800.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="800.0" y="1900">Score</text>
+<ellipse cx="1040.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1040.0" y="1900">NameMatch</text>
+<ellipse cx="1280.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1280.0" y="1900">AddressMatch</text>
+<ellipse cx="1520.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1520.0" y="1900">DateOfBirthMatch</text>
+<ellipse cx="1760.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1760.0" y="1900">TaxIdMatch</text>
+<ellipse cx="2000.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2000.0" y="1900">RiskCodes</text>
+<ellipse cx="2240.0" cy="1900" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2240.0" y="1900">VRTimeStamp</text>
+<ellipse cx="2670" cy="1601.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="1601.0" class="pk">DecisionId</text>
+<ellipse cx="2670" cy="1667.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="1667.0">DecisionType</text>
+<ellipse cx="2670" cy="1733.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="1733.0">Reason</text>
+<ellipse cx="2670" cy="1799.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="2670" y="1799.0">DecidedAt</text>
+<ellipse cx="130" cy="1545.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1545.0" class="pk">RecId</text>
+<ellipse cx="130" cy="1607.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1607.0">ATMessage</text>
+<ellipse cx="130" cy="1669.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1669.0">PrevStatus</text>
+<ellipse cx="130" cy="1731.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1731.0">CurrStatus</text>
+<ellipse cx="130" cy="1793.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1793.0">Reason</text>
+<ellipse cx="130" cy="1855.0" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="130" y="1855.0">DateTimeOccurred</text>
+<ellipse cx="900" cy="770" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="900" y="770" class="pk">TicketId</text>
+<ellipse cx="1140" cy="770" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1140" y="770">AccountType</text>
+<ellipse cx="1020" cy="695" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1020" y="695">TicketStatus</text>
+<ellipse cx="1260" cy="695" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1260" y="695">RiskRating</text>
+<ellipse cx="1900" cy="770" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1900" y="770">CreatedAt</text>
+<ellipse cx="1660" cy="770" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1660" y="770">VerificationDeadline</text>
+<ellipse cx="1780" cy="695" rx="118" ry="30" fill="#fff8e1" stroke="#444" stroke-width="2.2"/>
+<text x="1780" y="695">RowVersion</text>
+<rect x="390.0" y="905.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="520" y="950">Customers</text>
+<rect x="1270.0" y="905.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="1400" y="950">Tickets</text>
+<rect x="2150.0" y="905.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="2280" y="950">Admins</text>
+<rect x="1270.0" y="185.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="1400" y="230">Flags</text>
+<rect x="1270.0" y="1655.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="1400" y="1700">VendorResponses</text>
+<rect x="2150.0" y="1655.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="2280" y="1700">Decisions</text>
+<rect x="390.0" y="1655.0" width="260" height="90" fill="#e3f2fd" stroke="#111" stroke-width="3.5"/>
+<text class="e" x="520" y="1700">AuditTrails</text>
+<polygon points="960,806.0 1078.0,865 960,924.0 842.0,865" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="960" y="865">Applies For</text>
+<text class="c" x="687.9" y="942.0">1</text>
+<text class="c" x="1241.2" y="894.9">N</text>
+<polygon points="960,976.0 1078.0,1035 960,1094.0 842.0,1035" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="960" y="1035">Joint Holder</text>
+<text class="c" x="678.8" y="1005.1">1</text>
+<text class="c" x="1196.7" y="964.8">N</text>
+<polygon points="1840,806.0 1958.0,865 1840,924.0 1722.0,865" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1840" y="865">Assigned To</text>
+<text class="c" x="2121.2" y="894.9">1</text>
+<text class="c" x="1567.9" y="942.0">N</text>
+<polygon points="1840,976.0 1958.0,1035 1840,1094.0 1722.0,1035" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1840" y="1035">First Approves</text>
+<text class="c" x="2112.1" y="958.0">1</text>
+<text class="c" x="1594.2" y="1012.0">N</text>
+<polygon points="1400,501.0 1518.0,560 1400,619.0 1282.0,560" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1400" y="560">Has Flag</text>
+<text class="c" x="1424.0" y="871.0">1</text>
+<text class="c" x="1376.0" y="309.0">N</text>
+<polygon points="1900,131.0 2018.0,190 1900,249.0 1782.0,190" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1900" y="190">Raised By</text>
+<text class="c" x="2263.8" y="863.9">1</text>
+<text class="c" x="1565.8" y="240.8">N</text>
+<polygon points="1760,351.0 1878.0,410 1760,469.0 1642.0,410" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1760" y="410">Cleared By</text>
+<text class="c" x="2191.5" y="823.5">1</text>
+<text class="c" x="1509.7" y="311.7">N</text>
+<polygon points="1400,1271.0 1518.0,1330 1400,1389.0 1282.0,1330" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1400" y="1330">Has Response</text>
+<text class="c" x="1376.0" y="1029.0">1</text>
+<text class="c" x="1424.0" y="1621.0">N</text>
+<polygon points="1840,1271.0 1958.0,1330 1840,1389.0 1722.0,1330" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="1840" y="1330">Has Decision</text>
+<text class="c" x="1504.5" y="1072.0">1</text>
+<text class="c" x="2215.9" y="1614.7">1</text>
+<polygon points="2280,1271.0 2398.0,1330 2280,1389.0 2162.0,1330" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="2280" y="1330">Decides</text>
+<text class="c" x="2256.0" y="1029.0">1</text>
+<text class="c" x="2304.0" y="1621.0">N</text>
+<polygon points="960,1271.0 1078.0,1330 960,1389.0 842.0,1330" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="960" y="1330">Has Audit Trail</text>
+<text class="c" x="1264.1" y="1035.7">1</text>
+<text class="c" x="615.0" y="1651.5">N</text>
+<polygon points="520,1271.0 638.0,1330 520,1389.0 402.0,1330" fill="#e8f5e9" stroke="#111" stroke-width="3"/>
+<text class="r" x="520" y="1330">Concerns</text>
+<text class="c" x="496.0" y="1029.0">1</text>
+<text class="c" x="544.0" y="1621.0">N</text>
+<rect x="20" y="20" width="620" height="200" fill="#fafafa" stroke="#999"/>
+<text x="40" y="45" style="text-anchor:start;font-weight:700">Legend</text>
+<text x="40" y="75" style="text-anchor:start">Rectangle = table · Ellipse = column · Diamond = relationship</text>
+<text x="40" y="105" style="text-anchor:start">Underlined = primary key · Dashed underline = unique key</text>
+<text x="40" y="135" style="text-anchor:start">1 / N = cardinality · Double line = total participation</text>
+<text x="40" y="165" style="text-anchor:start">Single line = partial participation</text>
+<text x="40" y="195" style="text-anchor:start">Foreign-key columns are shown as relationships, not columns</text>
+</svg>
