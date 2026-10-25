@@ -12,7 +12,7 @@
     <form (ngSubmit)="acceptAdminCredentials()" novalidate>
         <div class="my-box">
         <div class="fields">
-        <h1>Log in as an admin</h1>
+        <h1 class="text">Log in as an admin</h1>
         <div class="username-container">
         <label for="Username">Username:</label>
         <input type="text" id="Username" name="Username"
@@ -34,7 +34,7 @@
         </div>
         <br>
         <div class="password-container">
-        <label for="Password">Password:</label>
+        <label for="Password" class="text">Password:</label>
         <input type="password" id="Password" name="Password"
         placeholder="Enter your password" 
         [formControl]="password"
@@ -55,7 +55,8 @@
         </div>
         </div>
         </div>
-        <button type="submit">Log in</button>
+        <br>
+        <button type="submit" class="button">Log in</button>
         </div>
         </div>
     </form>

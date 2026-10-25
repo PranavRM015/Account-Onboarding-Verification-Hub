@@ -9,22 +9,22 @@
 <body>
     <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
         <div class="my-box">
-            <h1>User Information Form</h1>
+            <h1>Please enter information for the incoming customer</h1>
             <div class="fields">
             <label for="First Name">First Name:</label>
             <input type="text" id="FirstName" name="FirstName" formControlName="FirstName" placeholder="Enter your first name" required>
             </div>
-            
+            <br>
             <div class="fields">
             <label for="Middle Name">Middle Name:</label>
             <input type="text" id="MiddleName" name="MiddleName" formControlName="MiddleName" placeholder="Enter your middle name">
             </div>
-
+            <br>
             <div class="fields">
             <label for="Last Name">Last Name:</label>
             <input type="text" id="LastName" name="LastName" formControlName="LastName" placeholder="Enter your last name" required>
             </div>
-
+            <br>
             <div class="fields">
             <label for="DateOfBirth">Date of Birth:</label>
             <input type="date" id="DateOfBirth" name="DateOfBirth" formControlName="DateOfBirth" [max]="maxBirthDate" required>
@@ -32,7 +32,7 @@
             <span class="error">Customer must be at least 18 years old.</span>
             }
             </div>
-
+            <br>
             <div class="fields">
             <label for="Gender">Gender:</label>
             <input type="radio" id="male" name="Gender" formControlName="Gender" value="Male" required>
@@ -42,7 +42,7 @@
             <input type="radio" id="other" name="Gender" formControlName="Gender" value="Other" required>
             <label for="other">Other</label>
             </div>
-
+            <br>
             <div class="fields">
             <label for="taxIdType">Tax ID Type:</label>
             <select id="taxIdType" name="taxIdType" formControlName="taxIdType" required>
@@ -52,7 +52,7 @@
                 <option value="EIN">EIN (Employer Identification Number)</option>
             </select>
             </div>
-
+            <br>
             <div class="fields">
             <label for="typeOfAccount">Individual/Joint?</label>
             <select id="typeOfAccount" name="accountType" formControlName="typeOfAccount" required>
@@ -61,7 +61,7 @@
                 <option value="Joint">Joint</option>
             </select>
             </div>
-
+            <br>
             @if (typeOfAccount.value === 'Joint') {
             <div class="fields">
             <div class="joint-container">
@@ -69,7 +69,7 @@
             <input type="number" id="jointCustomerId" name="jointCustomerId" formControlName="jointCustomerId"
             placeholder="Enter the second holder's customer ID" min="1" step="1"
             (focus)="hideModal()" />
-
+            <br>
             <div id="jointCustomerModal" class="modal" [class.show]="activeModal === 'jointCustomer'">
             <div class="modal-content">
                 <ul class="modal-text">
@@ -81,7 +81,7 @@
             </div>
             </div>
             }
-
+            <br>
             <div class="fields">
             <div class="taxid-container">
             <label for="taxIdNumber">Tax ID Number:</label>
@@ -92,7 +92,7 @@
             }
             </div>
             </div>
-
+            <br>
             <div class="fields">
             <div class="address-container">
             <label for="residentialAddress">Residential Address:</label>
@@ -100,7 +100,7 @@
             placeholder="1633 Main Street, Springfield, IL, 62701"
             (focus)="showModal('address')"
             (blur)="hideModal()" required>
-
+            <br>
             <div id="addressModal" class="modal" [class.show]="activeModal === 'address'">
             <div class="modal-content">
                 <ul class="modal-text">
@@ -115,7 +115,7 @@
             }
             </div>
             </div>
-
+            <br>
             <div class="fields">
             <label for="countryOfResidence">Country of Residence:</label>
             <select id="countryOfResidence" name="countryOfResidence" formControlName="countryOfResidence" required>
@@ -125,7 +125,7 @@
                 }
             </select>
             </div>
-
+            <br>
             <div class="fields">
             <label for="countryOfCitizenship">Country of Citizenship:</label>
             <select id="countryOfCitizenship" name="countryOfCitizenship" formControlName="countryOfCitizenship" required>
@@ -135,17 +135,17 @@
                 }
             </select>
             </div>
-
+            <br>
             <div class="fields">
             <label for="occupation">Occupation:</label>
             <input type="text" id="occupation" name="occupation" formControlName="occupation" placeholder="What is your occupation?" required>
             </div>
-
+            <br>
             <div class="fields">
             <label for="Employer">Employer:</label>
             <input type="text" id="Employer" name="Employer" formControlName="Employer" placeholder="What is your employer?" required>
             </div>
-
+            <br>
             <div class="fields">
             <button type="submit" [disabled]="userForm.invalid">Submit</button>
             </div>

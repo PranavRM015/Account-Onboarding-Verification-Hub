@@ -7,6 +7,7 @@ using AdminRepo;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using TicketExpiry;
 
 public class Program
 {
@@ -51,6 +52,8 @@ public class Program
                 options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = StatusCodes.Status403Forbidden; return Task.CompletedTask; };
             });
         builder.Services.AddAuthorization();
+
+        builder.Services.AddHostedService<TicketExpiryService>();
 
         builder.Services.AddControllers();
         var app = builder.Build();

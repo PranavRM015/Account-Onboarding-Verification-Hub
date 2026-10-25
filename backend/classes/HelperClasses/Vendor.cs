@@ -87,6 +87,10 @@ namespace MockVendor{
 				flag = new Flag(ticketId, "ClosedJurisdiction", a.AdminId);
 				Raise("Medium");
 			}
+			if( !(CountryOfCitizenship == "US" || CountryOfCitizenship == "MX") ){
+				flag = new Flag(ticketId, "ClosedJurisdiction", a.AdminId);
+				Raise("Medium");
+			}
 			return flag;
 		}
 		
@@ -129,7 +133,7 @@ namespace MockVendor{
                 riskCodes.Add("DeceasedSSN");
             }
 
-            string[] facilityKeywords = { "correctional", "penitentiary", "state prison", "detention center" };
+            string[] facilityKeywords = { "correctional", "penitentiary", "state prison", "detention center", "jail" };
             string address = c.ResidentialAddress.ToLower();
             if (facilityKeywords.Any(k => address.Contains(k)))
             {

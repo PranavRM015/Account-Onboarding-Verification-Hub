@@ -4,6 +4,11 @@
     display: inline-block;
 }
 
+.text{
+    color:white;
+    font-family: Arial, sans-serif;
+}
+
 .modal {
     display: none;
     position: absolute;
@@ -45,4 +50,10 @@
 
 .modal-text li:last-child {
     margin-bottom: 0;
+}
+
+.button {
+    border-radius: 4px;
+    font-size: 16px;
+    margin: 20px;
 }
