@@ -40,6 +40,7 @@ jobs:
       - name: Create the database schema and procedures
         run: |
           dotnet tool install --global dotnet-ef --version "10.0.*"
+          dotnet restore backend/backend.Api.csproj
           ASPNETCORE_ENVIRONMENT=Development dotnet ef migrations script --idempotent --project backend -o schema.sql
           sqlcmd() { docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$SA_PASSWORD" -b -I "$@"; }
           sqlcmd -Q "CREATE DATABASE VerificationHubDB"
