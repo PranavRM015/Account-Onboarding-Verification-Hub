@@ -1,9 +1,8 @@
-use VerificationHubDB;
-
-INSERT INTO Admins (Username, PasswordHash) VALUES (N'system', N'disabled');
+IF NOT EXISTS (SELECT 1 FROM Admins WHERE Username = N'system')
+    INSERT INTO Admins (Username, PasswordHash) VALUES (N'system', N'disabled');
 GO
 
-CREATE PROCEDURE pr_ticketExpireReject
+CREATE OR ALTER PROCEDURE pr_ticketExpireReject
     @ticketId int
 AS
 BEGIN
@@ -13,7 +12,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE pr_decisionExpireReject
+CREATE OR ALTER PROCEDURE pr_decisionExpireReject
     @ticketId int,
     @decisionType varchar(20),
     @decidedBy nvarchar(100),
@@ -26,7 +25,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE pr_auditTrailExpireReject
+CREATE OR ALTER PROCEDURE pr_auditTrailExpireReject
     @ticketId int,
     @customerId int,
     @prevStatus varchar(20),
@@ -41,7 +40,7 @@ BEGIN
 END;
 GO
 
-CREATE PROCEDURE pr_expireReviewTickets
+CREATE OR ALTER PROCEDURE pr_expireReviewTickets
 AS
 BEGIN
     SET NOCOUNT ON;

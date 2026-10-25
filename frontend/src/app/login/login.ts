@@ -57,6 +57,10 @@ export class Login {
       },
       error: (error) =>{
         console.error('Login failed:', error);
+        if (error.status === 429) {
+          alert('Too many attempts. Please wait a minute and try again.');
+          return;
+        }
         alert(error.status === 401 ? 'Invalid username or password.' : 'Login failed. Please try again.');
       }
     });

@@ -28,6 +28,12 @@ module.exports = function (config) {
       reporters: [{ type: 'html' }, { type: 'text-summary' }],
     },
     reporters: ['progress', 'kjhtml'],
+    customLaunchers: {
+      ChromeHeadlessCI: {
+        base: 'ChromeHeadless',
+        flags: ['--no-sandbox'],
+      },
+    },
     browsers: ['Chrome'],
     restartOnFileChange: true,
   });

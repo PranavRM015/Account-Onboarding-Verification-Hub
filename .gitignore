@@ -14,3 +14,8 @@ appsettings.Local.json
 
 # Angular build copied into the API for deployment
 backend/wwwroot/
+
+# Publish output
+publish/
+publish-out/
+publish.zip

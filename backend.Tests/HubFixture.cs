@@ -44,12 +44,19 @@ namespace backend.Tests
         public HttpClient Two { get; private set; } = null!;
         public IConfiguration Configuration => _factory.Services.GetRequiredService<IConfiguration>();
         public IServiceProvider Services => _factory.Services;
+        public string SignupCode => Configuration["Signup:Code"]!;
+        public HttpClient NewClient() => _factory.CreateClient();
+        public void TrackAdmin(string username) => _admins.Add(username);
         public string ConnectionString => Configuration.GetConnectionString("DefaultConnection")!;
 
         public async Task InitializeAsync()
         {
             _factory = new WebApplicationFactory<Program>()
-                .WithWebHostBuilder(b => b.UseSetting("TicketExpiry:Enabled", "false"));
+                .WithWebHostBuilder(b =>
+                {
+                    b.UseSetting("TicketExpiry:Enabled", "false");
+                    b.UseSetting("RateLimiting:Auth:PermitLimit", "1000");
+                });
             var deceasedPath = Path.Combine(AppContext.BaseDirectory, "DeceasedSSNs.csv");
             _deceasedLastFour = File.ReadLines(deceasedPath).Skip(1).Select(l => l.Trim()).ToHashSet();
             One = await SignedInClient(ReviewerOne);
@@ -60,7 +67,7 @@ namespace backend.Tests
         {
             var client = _factory.CreateClient();
             var credentials = new { username, password = Password };
-            var signup = await client.PostAsJsonAsync("/api/admins/signup", credentials);
+            var signup = await client.PostAsJsonAsync("/api/admins/signup", new { username, password = Password, signupCode = SignupCode });
             Assert.Equal(HttpStatusCode.OK, signup.StatusCode);
             _admins.Add(username);
             var login = await client.PostAsJsonAsync("/api/admins/login", credentials);

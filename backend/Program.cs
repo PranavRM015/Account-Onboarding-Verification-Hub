@@ -7,6 +7,8 @@ using AdminRepo;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.DataProtection;
+using System.Threading.RateLimiting;
 using TicketExpiry;
 
 public class Program
@@ -53,6 +55,30 @@ public class Program
             });
         builder.Services.AddAuthorization();
 
+        var dataProtection = builder.Services.AddDataProtection().SetApplicationName("AccountVerificationOnboardingHub");
+        var keysPath = builder.Configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(keysPath))
+        {
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        }
+
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy("auth", context =>
+            {
+                var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+                return RateLimitPartition.GetFixedWindowLimiter(
+                    context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                    _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = configuration.GetValue("RateLimiting:Auth:PermitLimit", 10),
+                        Window = TimeSpan.FromSeconds(configuration.GetValue("RateLimiting:Auth:WindowSeconds", 60)),
+                        QueueLimit = 0,
+                    });
+            });
+        });
+
         builder.Services.AddHostedService<TicketExpiryService>();
 
         builder.Services.AddControllers();
@@ -72,6 +98,7 @@ public class Program
         app.UseStaticFiles();
         app.UseRouting();
         app.UseCors("MyCorsPolicy");
+        app.UseRateLimiter();
         app.UseAuthentication();
         app.UseAuthorization();
         app.MapControllers();
