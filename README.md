@@ -148,7 +148,7 @@ The risk rating is the highest level reached by any flag on the ticket. An OfacM
 
 - Admins sign in with a session cookie that is HttpOnly, SameSite=Lax, Secure outside Development, and expires after 8 hours. JWT is not used, because the Angular app and the API are served from the same origin, so an HttpOnly cookie keeps the login out of reach of page scripts and access can be revoked right away.
 - Passwords are stored as salted PBKDF2-SHA512 hashes. Tax ID numbers are never stored, only a peppered hash and the last four digits.
-- Creating an admin through the signup form needs a shared signup code (`Signup:Code`). If no code is configured, signup is disabled. The first admin of a new database can instead be created with `BootstrapAdmin:Username` and `BootstrapAdmin:Password`.
+- Anyone can create an admin account through the signup form, which asks only for a username and a password. There is no signup code. The first admin of a new database can also be created with `BootstrapAdmin:Username` and `BootstrapAdmin:Password`.
 - Login and signup are limited to 10 requests per minute for each IP address, and the API answers 429 after that. `RateLimiting:Auth:PermitLimit` and `RateLimiting:Auth:WindowSeconds` change the limit.
 - Every logged in admin has the same permissions. Roles are not part of the MVP.
 
@@ -160,7 +160,7 @@ Backend: the `backend.Tests` project uses xUnit and has 72 tests.
 - Integration tests, which call the real API and use the database in the connection string (each test deletes the rows it created):
   - Every review scenario: a clean customer, an OFAC match, citizenship and residence combinations, and each cannabis keyword in the occupation and in the employer. Each one is accepted once (flags cleared, with a second reviewer for High risk) and rejected once.
   - The 60 day rejection: a ticket past its deadline, a ticket inside it, a ticket that already has a decision, running the procedure twice, and the timer rejecting a ticket on its own.
-  - The signup code and the login and signup rate limit.
+  - Signup (a new admin can log in, a taken username is rejected) and the login and signup rate limit.
 - Run them from the repository root with `dotnet test backend.Tests`. The migrations and `database/Procedures.sql` must be applied to the database first, and the API must not be running.
 
 Frontend: Jasmine/Karma specs for the signup, login and input form components, and one integration spec (`frontend/src/app/integration/onboarding.integration.spec.ts`) that uses mocked HTTP. It types into the signup, login, input form, review and result pages for the same scenarios as the backend, and accepts or rejects each one. Run them from the `frontend` folder with `npx ng test --watch=false --browsers=ChromeHeadless`.
@@ -188,7 +188,6 @@ Application settings on the Web App:
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `ConnectionStrings__DefaultConnection` | `Server=tcp:<server>.database.windows.net,1433;Database=<database>;Authentication=Active Directory Managed Identity;Encrypt=True;` |
 | `TaxIdHashPepper` | A random value of at least 32 bytes. Different from the development value. Do not change it after customers exist, because the stored hashes would no longer match |
-| `Signup__Code` | The shared signup code |
 | `DataProtection__KeysPath` | `D:\home\DataProtection-Keys` |
 | `BootstrapAdmin__Username` and `BootstrapAdmin__Password` | Only for the first deploy. Remove them after the first admin exists |
 

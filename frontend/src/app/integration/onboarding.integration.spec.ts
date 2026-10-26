@@ -47,7 +47,6 @@ const scenarios: Scenario[] = [
 ];
 
 const credentials = { username: 'reviewer_one', password: 'Str0ng!Passw0rd#2026' };
-const signupCode = 'dev-signup-code-2026';
 const address = '1633 Main Street, Springfield, IL, 62701';
 const ticketId = 41;
 const customerId = 17;
@@ -152,10 +151,9 @@ describe('Onboarding integration with mocked HTTP', () => {
     await harness.navigateByUrl('/signup');
     enter('#Username', credentials.username);
     enter('#Password', credentials.password);
-    enter('#SignupCode', signupCode);
     await clickButton('Sign up');
     const signup = http.expectOne('/api/admins/signup');
-    expect(signup.request.body).toEqual({ ...credentials, signupCode });
+    expect(signup.request.body).toEqual(credentials);
     signup.flush('created');
     await settle();
 
@@ -323,36 +321,14 @@ describe('Onboarding integration with mocked HTTP', () => {
       await harness.navigateByUrl('/signup');
       enter('#Username', credentials.username);
       enter('#Password', 'password');
-      enter('#SignupCode', signupCode);
       await clickButton('Sign up');
       http.expectNone('/api/admins/signup');
-    });
-
-    it('does not send the form without a signup code', async () => {
-      await harness.navigateByUrl('/signup');
-      enter('#Username', credentials.username);
-      enter('#Password', credentials.password);
-      await clickButton('Sign up');
-      http.expectNone('/api/admins/signup');
-    });
-
-    it('tells the admin when the signup code is wrong', async () => {
-      await harness.navigateByUrl('/signup');
-      enter('#Username', credentials.username);
-      enter('#Password', credentials.password);
-      enter('#SignupCode', 'wrong-code');
-      await clickButton('Sign up');
-      http.expectOne('/api/admins/signup').flush('no', { status: 403, statusText: 'Forbidden' });
-      await settle();
-      expect(window.alert).toHaveBeenCalledWith('That signup code is not valid.');
-      expect(TestBed.inject(Router).url).toBe('/signup');
     });
 
     it('tells the admin when the username is already taken', async () => {
       await harness.navigateByUrl('/signup');
       enter('#Username', credentials.username);
       enter('#Password', credentials.password);
-      enter('#SignupCode', signupCode);
       await clickButton('Sign up');
       http.expectOne('/api/admins/signup').flush('taken', { status: 409, statusText: 'Conflict' });
       await settle();

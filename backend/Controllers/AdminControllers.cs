@@ -27,10 +27,6 @@ namespace AdminControlNamespace
         public string username { get; set; } = string.Empty;
         public string password { get; set; } = string.Empty;
     }
-    public class SignupInformation : information
-    {
-        public string signupCode { get; set; } = string.Empty;
-    }
     public class InputFormInformation
     {
         public string FirstName { get; set; } = string.Empty;
@@ -54,31 +50,20 @@ namespace AdminControlNamespace
     public class AdminSignupController : ControllerBase
     {
         private readonly string _connectionString;
-        private readonly string _signupCode;
         private readonly ILogger<AdminSignupController> _logger;
 
         public AdminSignupController(IConfiguration configuration, ILogger<AdminSignupController> logger)
         {
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
-            _signupCode = configuration["Signup:Code"] ?? string.Empty;
             _logger = logger;
         }
 
         [AllowAnonymous]
         [EnableRateLimiting("auth")]
         [HttpPost("signup")]
-        public IActionResult CreateAdmin([FromBody] SignupInformation info)
+        public IActionResult CreateAdmin([FromBody] information info)
         {
-            if (_signupCode.Length == 0)
-            {
-                return StatusCode(StatusCodes.Status503ServiceUnavailable, "Signup is disabled because no signup code is configured.");
-            }
-            var suppliedCode = Encoding.UTF8.GetBytes(info.signupCode ?? string.Empty);
-            if (!CryptographicOperations.FixedTimeEquals(suppliedCode, Encoding.UTF8.GetBytes(_signupCode)))
-            {
-                return StatusCode(StatusCodes.Status403Forbidden, "That signup code is not valid.");
-            }
             var username = info.username?.Trim() ?? string.Empty;
             var password = info.password ?? string.Empty;
 

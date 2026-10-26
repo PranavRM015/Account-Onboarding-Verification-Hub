@@ -34,19 +34,19 @@ namespace backend.Tests
         }
 
         [Fact]
-        public async Task SignupGuessesAreBlockedToo()
+        public async Task RepeatedSignupAttemptsAreBlockedToo()
         {
             using var factory = LimitedFactory(2);
             var client = factory.CreateClient();
-            var guess = new { username = "nobody_" + Guid.NewGuid().ToString("N")[..8], password = HubFixture.Password, signupCode = "guess" };
+            var attempt = new { username = "", password = HubFixture.Password };
 
             for (var i = 0; i < 2; i++)
             {
-                var response = await client.PostAsJsonAsync("/api/admins/signup", guess);
-                Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+                var response = await client.PostAsJsonAsync("/api/admins/signup", attempt);
+                Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
             }
 
-            var blocked = await client.PostAsJsonAsync("/api/admins/signup", guess);
+            var blocked = await client.PostAsJsonAsync("/api/admins/signup", attempt);
             Assert.Equal(HttpStatusCode.TooManyRequests, blocked.StatusCode);
         }
     }
