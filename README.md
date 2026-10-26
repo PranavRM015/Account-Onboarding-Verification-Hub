@@ -188,6 +188,7 @@ Application settings on the Web App:
 | `ASPNETCORE_ENVIRONMENT` | `Production` |
 | `ConnectionStrings__DefaultConnection` | `Server=tcp:<server>.database.windows.net,1433;Database=<database>;Authentication=Active Directory Managed Identity;Encrypt=True;` |
 | `TaxIdHashPepper` | A random value of at least 32 bytes. Different from the development value. Do not change it after customers exist, because the stored hashes would no longer match |
+| `Jwt__Key` | A random secret of at least 32 characters that signs the login tokens. The app will not start in Production without it, or if it starts with `dev-only`. Changing it logs every admin out. Optional: `Jwt__Issuer`, `Jwt__Audience` and `Jwt__ExpiryMinutes` (default 60) |
 | `DataProtection__KeysPath` | `D:\home\DataProtection-Keys` |
 | `BootstrapAdmin__Username` and `BootstrapAdmin__Password` | Only for the first deploy. Remove them after the first admin exists |
 

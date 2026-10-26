@@ -5,6 +5,8 @@ using Admins;
 using AdminControlNamespace;
 using AdminRepo;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using JwtTokens;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.DataProtection;
@@ -42,8 +44,39 @@ public class Program
         builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-        // Cookie sign-in for admins; APIs answer 401/403 instead of redirecting to a login page.
-        builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+        // JWT bearer tokens are the main sign-in. The cookie still works as a fallback when no Authorization header is sent.
+        // APIs answer 401/403 instead of redirecting to a login page.
+        builder.Services.AddSingleton<JwtTokenService>();
+        builder.Services.AddAuthentication(options =>
+            {
+                options.DefaultScheme = "BearerOrCookie";
+                options.DefaultChallengeScheme = "BearerOrCookie";
+            })
+            .AddPolicyScheme("BearerOrCookie", "Bearer or cookie", options =>
+            {
+                options.ForwardDefaultSelector = ctx =>
+                    ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                        ? JwtBearerDefaults.AuthenticationScheme
+                        : CookieAuthenticationDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters = new JwtTokenService(builder.Configuration).ValidationParameters();
+                options.MapInboundClaims = false;
+                options.Events = new JwtBearerEvents
+                {
+                    // A token that was logged out is rejected even though it has not expired yet.
+                    OnTokenValidated = async ctx =>
+                    {
+                        var jti = ctx.Principal?.FindFirst("jti")?.Value;
+                        var db = ctx.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                        if (string.IsNullOrEmpty(jti) || await db.RevokedTokens.AnyAsync(t => t.Jti == jti))
+                        {
+                            ctx.Fail("This token has been revoked.");
+                        }
+                    },
+                };
+            })
             .AddCookie(options =>
             {
                 options.Cookie.HttpOnly = true;
@@ -89,6 +122,13 @@ public class Program
             || (!app.Environment.IsDevelopment() && (pepper.Length < 32 || pepper == "dev-only-change-me-before-production")))
         {
             throw new InvalidOperationException("'TaxIdHashPepper' must be set to a strong value of at least 32 characters.");
+        }
+
+        var jwtKey = app.Configuration["Jwt:Key"];
+        JwtTokenService.SigningKey(app.Configuration); // fails at startup if the key is missing or too short
+        if (!app.Environment.IsDevelopment() && jwtKey!.StartsWith("dev-only"))
+        {
+            throw new InvalidOperationException("'Jwt:Key' must not be the development value in production.");
         }
 
         CreateFirstAdmin(app);

@@ -163,7 +163,7 @@ describe('Onboarding integration with mocked HTTP', () => {
     await clickButton('Log in');
     const login = http.expectOne('/api/admins/login');
     expect(login.request.body).toEqual(credentials);
-    login.flush('ok');
+    login.flush({ message: 'ok', username: credentials.username, token: 'test-token', expiresAt: '2099-01-01T00:00:00Z' });
     await settle();
     expect(TestBed.inject(Router).url).toBe('/inputForm');
   };
@@ -223,6 +223,7 @@ describe('Onboarding integration with mocked HTTP', () => {
       providers: [provideRouter(routes), provideHttpClient(), provideHttpClientTesting()],
     });
     spyOn(window, 'alert');
+    localStorage.removeItem('authToken');
     harness = await RouterTestingHarness.create();
     http = TestBed.inject(HttpTestingController);
   });
@@ -355,6 +356,30 @@ describe('Onboarding integration with mocked HTTP', () => {
       await settle();
       expect(window.alert).toHaveBeenCalledWith('Invalid username or password.');
       expect(TestBed.inject(Router).url).toBe('/login');
+    });
+  });
+
+  describe('logging out', () => {
+    it('sends a signed-out visitor to the login page instead of a protected page', async () => {
+      await harness.navigateByUrl('/inputForm');
+      expect(TestBed.inject(Router).url).toBe('/login');
+    });
+
+    it('revokes the token and returns to the home page from the result screen', async () => {
+      await signUpAndLogIn();
+      expect(localStorage.getItem('authToken')).toBe('test-token');
+      await harness.navigateByUrl('/result/7');
+      http.expectOne('/api/admins/tickets/7').flush(ticketFor(scenarios[0], 'Review', 0));
+      await settle();
+
+      await clickButton('Log out');
+      const logout = http.expectOne('/api/admins/logout');
+      expect(logout.request.method).toBe('POST');
+      logout.flush({ message: 'Logged out' });
+      await settle();
+
+      expect(localStorage.getItem('authToken')).toBeNull();
+      expect(TestBed.inject(Router).url).toBe('/');
     });
   });
 });

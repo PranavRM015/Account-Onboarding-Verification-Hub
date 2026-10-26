@@ -274,6 +274,20 @@ namespace backend.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("RevokedTokens.RevokedToken", b =>
+                {
+                    b.Property<string>("Jti")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Jti");
+
+                    b.ToTable("RevokedTokens");
+                });
+
             modelBuilder.Entity("Tickets.Ticket", b =>
                 {
                     b.Property<int>("TicketId")

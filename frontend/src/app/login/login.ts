@@ -2,6 +2,7 @@ import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { AuthService, LoginResponse } from '../auth/auth.service';
 
 @Component({
   imports: [FormsModule, ReactiveFormsModule],
@@ -36,6 +37,7 @@ export class Login {
   private http = inject(HttpClient);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private auth = inject(AuthService);
 
   acceptAdminCredentials(): void {
     console.log('Form submitted!');
@@ -50,9 +52,10 @@ export class Login {
       passwordPresent: !!requestBody.password
     });
 
-    this.http.post('/api/admins/login', requestBody, { responseType: 'text' }).subscribe({
+    this.http.post<LoginResponse>('/api/admins/login', requestBody).subscribe({
       next: (response) => {
-        console.log('Admin logged in successfully:', response);
+        console.log('Admin logged in successfully:', response.username);
+        this.auth.saveToken(response.token);
         this.router.navigate(['/inputForm']);
       },
       error: (error) =>{

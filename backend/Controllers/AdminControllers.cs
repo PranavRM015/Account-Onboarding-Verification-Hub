@@ -18,6 +18,9 @@ using Microsoft.Data.SqlClient;
 using Admins;
 using Flags;
 using MockVendor;
+using JwtTokens;
+using RevokedTokens;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 
 namespace AdminControlNamespace
@@ -94,9 +97,13 @@ namespace AdminControlNamespace
     {
         private readonly string _connectionString;
         private readonly ILogger<AdminLoginController> _logger;
+        private readonly JwtTokenService _tokens;
+        private readonly AppDbContext _db;
 
-        public AdminLoginController(IConfiguration configuration, ILogger<AdminLoginController> logger)
+        public AdminLoginController(IConfiguration configuration, ILogger<AdminLoginController> logger, JwtTokenService tokens, AppDbContext db)
         {
+            _tokens = tokens;
+            _db = db;
             _connectionString = configuration.GetConnectionString("DefaultConnection")
                 ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
             _logger = logger;
@@ -120,17 +127,46 @@ namespace AdminControlNamespace
                     return Unauthorized("Invalid username or password.");
                 }
                 var storedUsername = adminRepository.GetStoredUsername(username) ?? username;
-                // Session cookie; the input form controller reads the admin's name from it for Ticket.AssignedTo.
+                // The JWT is the main sign-in; the session cookie is kept as a fallback. Both carry the admin's name,
+                // which the controllers read for Ticket.AssignedTo.
                 var identity = new ClaimsIdentity(
                     new[] { new Claim(ClaimTypes.Name, storedUsername) },
                     CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-                return Ok(new { message = "Admin logged in successfully", username = storedUsername });
+                var (token, expiresAt) = _tokens.Issue(storedUsername);
+                return Ok(new { message = "Admin logged in successfully", username = storedUsername, token, expiresAt });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to log in admin '{Username}'.", username);
                 return Problem("An error occurred while logging in.");
+            }
+        }
+
+        // Revokes the JWT that made this request and clears the cookie, so neither can be used again.
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                var jti = User.FindFirst("jti")?.Value;
+                var expiry = User.FindFirst("exp")?.Value;
+                if (!string.IsNullOrEmpty(jti) && long.TryParse(expiry, out var exp)
+                    && !await _db.RevokedTokens.AnyAsync(t => t.Jti == jti))
+                {
+                    _db.RevokedTokens.Add(new RevokedToken(jti, DateTimeOffset.FromUnixTimeSeconds(exp).UtcDateTime));
+                    await _db.SaveChangesAsync();
+                }
+                // Revoked tokens that have expired anyway no longer need to be remembered.
+                await _db.RevokedTokens.Where(t => t.ExpiresAt < DateTime.UtcNow).ExecuteDeleteAsync();
+                await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+                return Ok(new { message = "Logged out" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to log out.");
+                return Problem("An error occurred while logging out.");
             }
         }
     }

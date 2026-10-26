@@ -3,6 +3,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { AuthService } from '../auth/auth.service';
 import { TicketDetails, flagLabel, riskCodeLabel, riskCodeList } from '../ticket/ticketDetails';
 
 @Component({
@@ -16,6 +17,7 @@ export class Result implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private auth = inject(AuthService);
 
   readonly ticket = signal<TicketDetails | null>(null);
   readonly errorMessage = signal('');
@@ -28,6 +30,10 @@ export class Result implements OnInit {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.load(Number(params.get('ticketId')));
     });
+  }
+
+  logout(): void {
+    this.auth.logout().subscribe();
   }
 
   customerName(ticket: TicketDetails): string {
