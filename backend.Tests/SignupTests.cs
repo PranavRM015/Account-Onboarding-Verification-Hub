@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 
 namespace backend.Tests
@@ -21,7 +21,7 @@ namespace backend.Tests
             _hub.TrackAdmin(username);
             var client = _hub.NewClient();
 
-            var signup = await client.PostAsJsonAsync("/api/admins/signup", new { username, password = HubFixture.Password });
+            var signup = await client.PostAsJsonAsync("/api/admins/signup", _hub.AdminBody(username));
             Assert.Equal(HttpStatusCode.OK, signup.StatusCode);
 
             var login = await client.PostAsJsonAsync("/api/admins/login", new { username, password = HubFixture.Password });
@@ -35,10 +35,10 @@ namespace backend.Tests
             _hub.TrackAdmin(username);
             var client = _hub.NewClient();
 
-            var first = await client.PostAsJsonAsync("/api/admins/signup", new { username, password = HubFixture.Password });
+            var first = await client.PostAsJsonAsync("/api/admins/signup", _hub.AdminBody(username));
             Assert.Equal(HttpStatusCode.OK, first.StatusCode);
 
-            var second = await client.PostAsJsonAsync("/api/admins/signup", new { username, password = HubFixture.Password });
+            var second = await client.PostAsJsonAsync("/api/admins/signup", _hub.AdminBody(username));
             Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
         }
     }

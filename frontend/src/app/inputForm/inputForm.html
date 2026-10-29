@@ -10,6 +10,49 @@
     <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
         <div class="my-box">
             <h1>Please enter information for the incoming customer</h1>
+            <h2>Customer login details</h2>
+            <div class="fields">
+            <label for="CustomerUsername">Username:</label>
+            <input type="text" id="CustomerUsername" name="username" formControlName="username" placeholder="Choose a username for the customer" autocomplete="off" required>
+            </div>
+            <br>
+            <div class="fields">
+            <div class="password-container">
+            <label for="CustomerPassword">Password:</label>
+            <input type="password" id="CustomerPassword" name="password" formControlName="password" placeholder="Choose a password for the customer" autocomplete="new-password"
+            (focus)="showModal('password')"
+            (blur)="hideModal()" required>
+            <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
+            <div class="modal-content">
+                <ul class="modal-text">
+                    <li><strong>Password must be:</strong></li>
+                    <li>at least 8 characters long</li>
+                    <li>have at least one uppercase letter</li>
+                    <li>have at least one lowercase letter</li>
+                    <li>have at least one number</li>
+                    <li>have at least one special character</li>
+                </ul>
+            </div>
+            </div>
+            </div>
+            </div>
+            <br>
+            <div class="fields">
+            <label for="recoveryQuestion">Password recovery question:</label>
+            <select id="recoveryQuestion" name="passwordRecoveryQuestion" formControlName="passwordRecoveryQuestion" required>
+                <option value="" disabled>Select a question</option>
+                @for (q of questions; track q) {
+                <option [value]="q">{{ q }}</option>
+                }
+            </select>
+            </div>
+            <br>
+            <div class="fields">
+            <label for="recoveryAnswer">Answer:</label>
+            <input type="text" id="recoveryAnswer" name="passwordRecoveryAnswer" formControlName="passwordRecoveryAnswer" placeholder="Enter the customer's answer" autocomplete="off" required>
+            </div>
+            <br>
+            <h2>Customer details</h2>
             <div class="fields">
             <label for="First Name">First Name:</label>
             <input type="text" id="FirstName" name="FirstName" formControlName="FirstName" placeholder="Enter your first name" required>

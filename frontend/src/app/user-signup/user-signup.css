@@ -1,0 +1,18 @@
+.my-box {
+    width: 520px;
+}
+
+.username-container,
+.password-container,
+.address-container {
+    position: relative;
+    display: inline-block;
+}
+
+.address-container .modal {
+    width: 300px;
+}
+
+label {
+    margin-top: 10px;
+}

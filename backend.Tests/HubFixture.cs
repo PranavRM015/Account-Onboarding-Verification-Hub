@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -24,6 +24,10 @@ namespace backend.Tests
         public string Occupation { get; set; } = "Teacher";
         public string Employer { get; set; } = "City Public School";
         public string TypeOfAccount { get; set; } = "Individual";
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = HubFixture.Password;
+        public string PasswordRecoveryQuestion { get; set; } = HubFixture.Question;
+        public string PasswordRecoveryAnswer { get; set; } = HubFixture.Answer;
     }
 
     public class HubFixture : IAsyncLifetime
@@ -33,10 +37,13 @@ namespace backend.Tests
         private readonly List<int> _tickets = new();
         private readonly List<int> _customers = new();
         private readonly List<string> _admins = new();
+        private readonly List<string> _customerNames = new();
         private WebApplicationFactory<Program> _factory = null!;
         private HashSet<string> _deceasedLastFour = new();
 
         public const string Password = "Str0ng!Passw0rd#2026";
+        public const string Question = "What is your favorite food?";
+        public const string Answer = "Pizza";
         public string Suffix { get; } = Guid.NewGuid().ToString("N")[..8];
         public string ReviewerOne => $"reviewer_one_{Suffix}";
         public string ReviewerTwo => $"reviewer_two_{Suffix}";
@@ -46,6 +53,7 @@ namespace backend.Tests
         public IServiceProvider Services => _factory.Services;
         public HttpClient NewClient() => _factory.CreateClient();
         public void TrackAdmin(string username) => _admins.Add(username);
+        public void TrackCustomer(string username) => _customerNames.Add(username);
         public string ConnectionString => Configuration.GetConnectionString("DefaultConnection")!;
 
         public async Task InitializeAsync()
@@ -62,11 +70,92 @@ namespace backend.Tests
             Two = await SignedInClient(ReviewerTwo);
         }
 
+        // A complete, valid admin signup body. Every admin needs a different SSN, so each call makes a fresh one.
+        public object AdminBody(string username, string password = Password) => new
+        {
+            username,
+            password,
+            firstName = "Alex",
+            middleName = "",
+            lastName = "Reviewer",
+            dateOfBirth = new DateTime(1990, 5, 20),
+            gender = "Other",
+            ssn = NewTaxId(),
+            isCitizen = true,
+            countryOfCitizenship = "US",
+            passwordRecoveryQuestion = Question,
+            passwordRecoveryAnswer = Answer,
+        };
+
+        // A complete, valid customer (user) signup body.
+        public object UserBody(string username, string password = Password) => new
+        {
+            username,
+            password,
+            firstName = "Casey",
+            middleName = "",
+            lastName = "Selfsignup",
+            dateOfBirth = new DateTime(1985, 4, 12),
+            gender = "Other",
+            taxIdType = "SSN",
+            taxIdNumber = NewTaxId(),
+            residentialAddress = "12 Main Street",
+            countryOfResidence = "US",
+            countryOfCitizenship = "US",
+            occupation = "Teacher",
+            employer = "City Public School",
+            passwordRecoveryQuestion = Question,
+            passwordRecoveryAnswer = Answer,
+        };
+
+        public async Task<string> NewAdmin(string prefix = "adm")
+        {
+            var username = $"{prefix}_{Guid.NewGuid():N}"[..20];
+            TrackAdmin(username);
+            var response = await NewClient().PostAsJsonAsync("/api/admins/signup", AdminBody(username));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return username;
+        }
+
+        public async Task<string> NewUser(string prefix = "usr")
+        {
+            var username = $"{prefix}_{Guid.NewGuid():N}"[..20];
+            TrackCustomer(username);
+            var response = await NewClient().PostAsJsonAsync("/api/users/signup", UserBody(username));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return username;
+        }
+
+        // Runs a statement against the database, for things the API can't do, like moving a lockout into the past.
+        public void Sql(string sql, params (string Name, object Value)[] parameters)
+        {
+            using var connection = new SqlConnection(ConnectionString);
+            connection.Open();
+            using var command = new SqlCommand(sql, connection);
+            foreach (var (name, value) in parameters)
+            {
+                command.Parameters.AddWithValue(name, value);
+            }
+            command.ExecuteNonQuery();
+        }
+
+        public T Scalar<T>(string sql, params (string Name, object Value)[] parameters)
+        {
+            using var connection = new SqlConnection(ConnectionString);
+            connection.Open();
+            using var command = new SqlCommand(sql, connection);
+            foreach (var (name, value) in parameters)
+            {
+                command.Parameters.AddWithValue(name, value);
+            }
+            return (T)command.ExecuteScalar()!;
+        }
+
         private async Task<HttpClient> SignedInClient(string username)
         {
             var client = _factory.CreateClient();
             var credentials = new { username, password = Password };
-            var signup = await client.PostAsJsonAsync("/api/admins/signup", new { username, password = Password });
+            var signup = await client.PostAsJsonAsync("/api/admins/signup", AdminBody(username));
             Assert.Equal(HttpStatusCode.OK, signup.StatusCode);
             _admins.Add(username);
             var login = await client.PostAsJsonAsync("/api/admins/login", credentials);
@@ -74,11 +163,16 @@ namespace backend.Tests
             return client;
         }
 
-        private string NewTaxId()
+        public string NewTaxId()
         {
             while (true)
             {
-                var number = Rng.Next(100000000, 999999999).ToString();
+                int value;
+                lock (Rng) // test classes run in parallel and Random isn't thread-safe
+                {
+                    value = Rng.Next(100000000, 999999999);
+                }
+                var number = value.ToString();
                 if (!_deceasedLastFour.Contains(number[^4..]))
                 {
                     return number;
@@ -89,6 +183,11 @@ namespace backend.Tests
         public async Task<TicketDetailsDto> Submit(CustomerForm form)
         {
             form.TaxIdNumber = NewTaxId();
+            if (form.Username.Length == 0)
+            {
+                form.Username = $"cust_{Guid.NewGuid():N}"[..20];
+            }
+            _customerNames.Add(form.Username);
             if (form.LastName == "Testcase")
             {
                 form.LastName = "Testcase" + Suffix;
@@ -194,6 +293,10 @@ namespace backend.Tests
             foreach (var id in _customers)
             {
                 Run(connection, "DELETE FROM Customers WHERE CustomerId = @id", ("@id", id));
+            }
+            foreach (var name in _customerNames)
+            {
+                Run(connection, "DELETE FROM Customers WHERE Username = @name", ("@name", name));
             }
             foreach (var name in _admins)
             {

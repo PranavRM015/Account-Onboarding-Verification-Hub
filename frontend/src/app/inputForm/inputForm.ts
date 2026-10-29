@@ -3,34 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 
-// ISO 3166-1 alpha-2 codes (the database stores char(2)); the display names come from Intl.DisplayNames
-const isoCountryCodes = [
-  'AD', 'AE', 'AF', 'AG', 'AI', 'AL', 'AM', 'AO', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AW', 'AX', 'AZ',
-  'BA', 'BB', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BL', 'BM', 'BN', 'BO', 'BQ', 'BR', 'BS', 'BT', 'BV', 'BW', 'BY', 'BZ',
-  'CA', 'CC', 'CD', 'CF', 'CG', 'CH', 'CI', 'CK', 'CL', 'CM', 'CN', 'CO', 'CR', 'CU', 'CV', 'CW', 'CX', 'CY', 'CZ',
-  'DE', 'DJ', 'DK', 'DM', 'DO', 'DZ',
-  'EC', 'EE', 'EG', 'EH', 'ER', 'ES', 'ET',
-  'FI', 'FJ', 'FK', 'FM', 'FO', 'FR',
-  'GA', 'GB', 'GD', 'GE', 'GF', 'GG', 'GH', 'GI', 'GL', 'GM', 'GN', 'GP', 'GQ', 'GR', 'GS', 'GT', 'GU', 'GW', 'GY',
-  'HK', 'HM', 'HN', 'HR', 'HT', 'HU',
-  'ID', 'IE', 'IL', 'IM', 'IN', 'IO', 'IQ', 'IR', 'IS', 'IT',
-  'JE', 'JM', 'JO', 'JP',
-  'KE', 'KG', 'KH', 'KI', 'KM', 'KN', 'KP', 'KR', 'KW', 'KY', 'KZ',
-  'LA', 'LB', 'LC', 'LI', 'LK', 'LR', 'LS', 'LT', 'LU', 'LV', 'LY',
-  'MA', 'MC', 'MD', 'ME', 'MF', 'MG', 'MH', 'MK', 'ML', 'MM', 'MN', 'MO', 'MP', 'MQ', 'MR', 'MS', 'MT', 'MU', 'MV', 'MW', 'MX', 'MY', 'MZ',
-  'NA', 'NC', 'NE', 'NF', 'NG', 'NI', 'NL', 'NO', 'NP', 'NR', 'NU', 'NZ',
-  'OM',
-  'PA', 'PE', 'PF', 'PG', 'PH', 'PK', 'PL', 'PM', 'PN', 'PR', 'PS', 'PT', 'PW', 'PY',
-  'QA',
-  'RE', 'RO', 'RS', 'RU', 'RW',
-  'SA', 'SB', 'SC', 'SD', 'SE', 'SG', 'SH', 'SI', 'SJ', 'SK', 'SL', 'SM', 'SN', 'SO', 'SR', 'SS', 'ST', 'SV', 'SX', 'SY', 'SZ',
-  'TC', 'TD', 'TF', 'TG', 'TH', 'TJ', 'TK', 'TL', 'TM', 'TN', 'TO', 'TR', 'TT', 'TV', 'TW', 'TZ',
-  'UA', 'UG', 'UM', 'US', 'UY', 'UZ',
-  'VA', 'VC', 'VE', 'VG', 'VI', 'VN', 'VU',
-  'WF', 'WS',
-  'YE', 'YT',
-  'ZA', 'ZM', 'ZW',
-];
+import { countries } from '../shared/countries';
+import { passwordControl, recoveryQuestions, usernameControl } from '../shared/form-rules';
 
 @Component({
   imports: [FormsModule, ReactiveFormsModule],
@@ -117,6 +91,16 @@ export class UserFormComponent {
     validators: [Validators.required, Validators.maxLength(100)],
   });
 
+  // The customer's own login details, entered by the admin who signs them up.
+  readonly username = usernameControl();
+  readonly password = passwordControl();
+  readonly passwordRecoveryQuestion = new FormControl('', { nonNullable: true, validators: [Validators.required] });
+  readonly passwordRecoveryAnswer = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required, Validators.pattern(/\S/), Validators.maxLength(100)],
+  });
+  readonly questions = recoveryQuestions;
+
   readonly typeOfAccount = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required],
@@ -140,16 +124,20 @@ export class UserFormComponent {
     countryOfCitizenship: this.countryOfCitizenship,
     occupation: this.occupation,
     Employer: this.employer,
+    username: this.username,
+    password: this.password,
+    passwordRecoveryQuestion: this.passwordRecoveryQuestion,
+    passwordRecoveryAnswer: this.passwordRecoveryAnswer,
     typeOfAccount: this.typeOfAccount,
     jointCustomerId: this.jointCustomerId,
   });
 
   // Same pattern as the password/username hints in login: the template shows the modal when this matches.
-  activeModal: 'jointCustomer' | 'address' | null = null;
+  activeModal: 'jointCustomer' | 'address' | 'password' | null = null;
   showTaxId = false;
 
   showModal(which: string): void {
-    this.activeModal = which as 'jointCustomer' | 'address' | null;
+    this.activeModal = which as 'jointCustomer' | 'address' | 'password' | null;
   }
 
   toggleTaxId(): void {
@@ -172,12 +160,7 @@ export class UserFormComponent {
     });
   }
 
-  readonly countries = (() => {
-    const names = new Intl.DisplayNames(['en'], { type: 'region' });
-    return isoCountryCodes
-      .map((code) => ({ code, name: names.of(code) ?? code }))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  })();
+  readonly countries = countries;
 
   private http = inject(HttpClient);
   private router = inject(Router);
@@ -212,6 +195,10 @@ export class UserFormComponent {
       Employer,
       typeOfAccount,
       jointCustomerId,
+      username: this.username.value,
+      password: this.password.value,
+      passwordRecoveryQuestion: this.passwordRecoveryQuestion.value,
+      passwordRecoveryAnswer: this.passwordRecoveryAnswer.value,
     };
     console.log('Submitting input form request:', {
       firstName: requestBody.FirstName,
@@ -252,7 +239,11 @@ export class UserFormComponent {
     console.error('Submission failed:', error);
     if (error.status === 401) {
       alert('Your session has expired. Please log in again.');
-      this.router.navigate(['/login']);
+      this.router.navigate(['/admin/login']);
+    } else if (error.status === 403) {
+      alert('Only admins can sign customers up.');
+    } else if (error.status === 409 && !error.error?.customerId) {
+      alert(error.error?.message ?? 'That username is already taken.');
     } else if (error.status === 409) {
       alert(`A customer with that tax ID already exists (Customer ID ${error.error?.customerId}).`);
     } else {

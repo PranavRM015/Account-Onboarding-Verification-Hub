@@ -21,27 +21,6 @@ namespace AdminRepo
             return result?.ToString(); 
         }
 
-        public void AddAdmin(string username, string password)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var command = new SqlCommand("INSERT INTO Admins (Username, PasswordHash) VALUES (@Username, @PasswordHash)", connection);
-            command.Parameters.AddWithValue("@Username", username);
-            command.Parameters.AddWithValue("@PasswordHash", PasswordHasher.PasswordHash(password));
-            var ticketId = command.ExecuteScalar();
-            using var getAdminId = new SqlCommand("Select top 1 AdminId from Admins where Username = @Username", connection);
-            getAdminId.Parameters.AddWithValue("@Username", username);
-            object adminIdVal = getAdminId.ExecuteScalar();
-            int AdminId = 0;
-            if(adminIdVal!= null)
-            {
-                AdminId = Convert.ToInt32(adminIdVal);
-            }
-            
-            //string userName = "";
-            //userName = GetUsername(AdminId);
-        }
-
         public int GetRecentTicket(int customerId)
         {
             using var connection = new SqlConnection(_connectionString);
@@ -50,27 +29,6 @@ namespace AdminRepo
             command.Parameters.AddWithValue("@CustomerId", customerId);
             var ticketId = command.ExecuteScalar();
             return ticketId is null ? 0 : (int)ticketId;
-        }
-
-        /// <summary>True when the admin exists and the password matches the stored salted hash.</summary>
-        public bool ValidateAdmin(string username, string password)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var command = new SqlCommand("SELECT PasswordHash FROM Admins WHERE Username = @Username", connection);
-            command.Parameters.AddWithValue("@Username", username);
-            var storedHash = command.ExecuteScalar() as string;
-            return storedHash != null && PasswordHasher.VerifyPassword(password, storedHash);
-        }
-
-        /// <summary>The username exactly as stored (SQL Server matches usernames case-insensitively), or null when there is no such admin.</summary>
-        public string? GetStoredUsername(string username)
-        {
-            using var connection = new SqlConnection(_connectionString);
-            connection.Open();
-            using var command = new SqlCommand("SELECT Username FROM Admins WHERE Username = @Username", connection);
-            command.Parameters.AddWithValue("@Username", username);
-            return command.ExecuteScalar() as string;
         }
 
         public bool InsertTicket(int customerId, int? jointCustomerId, string accountType, string assignedTo)

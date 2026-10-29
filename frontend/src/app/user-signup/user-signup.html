@@ -1,0 +1,138 @@
+<form (ngSubmit)="signUp()" novalidate>
+    <div class="my-box">
+        <div class="fields">
+            <h1>Sign up as a new user</h1>
+            <div class="username-container">
+                <label for="Username">Username:</label>
+                <input type="text" id="Username" name="Username"
+                    placeholder="Enter your username"
+                    [formControl]="username"
+                    (focus)="showModal('username')"
+                    (blur)="hideModal()" />
+
+                <div id="usernameModal" class="modal" [class.show]="activeModal === 'username'">
+                    <div class="modal-content">
+                        <ul class="modal-text">
+                            <li><strong>Username must be:</strong></li>
+                            <li>at least 3 characters long</li>
+                            <li>no more than 40 characters long</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <div class="password-container">
+                <label for="Password">Password:</label>
+                <input type="password" id="Password" name="Password"
+                    placeholder="Enter your password"
+                    [formControl]="password"
+                    (focus)="showModal('password')"
+                    (blur)="hideModal()" />
+
+                <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
+                    <div class="modal-content">
+                        <ul class="modal-text">
+                            <li><strong>Password must be:</strong></li>
+                            <li>at least 8 characters long</li>
+                            <li>have at least one uppercase letter</li>
+                            <li>have at least one lowercase letter</li>
+                            <li>have at least one number</li>
+                            <li>have at least one special character</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <label for="RecoveryQuestion">Password recovery question:</label>
+            <select id="RecoveryQuestion" [formControl]="passwordRecoveryQuestion">
+                <option value="" disabled>Select a question</option>
+                @for (q of questions; track q) {
+                <option [value]="q">{{ q }}</option>
+                }
+            </select>
+            <br>
+            <label for="RecoveryAnswer">Your answer:</label>
+            <input type="text" id="RecoveryAnswer" [formControl]="passwordRecoveryAnswer" placeholder="Enter your answer" autocomplete="off" />
+            <br>
+            <label for="FirstName">First name:</label>
+            <input type="text" id="FirstName" [formControl]="firstName" placeholder="Enter your first name" />
+            <br>
+            <label for="MiddleName">Middle name:</label>
+            <input type="text" id="MiddleName" [formControl]="middleName" placeholder="Enter your middle name (optional)" />
+            <br>
+            <label for="LastName">Last name:</label>
+            <input type="text" id="LastName" [formControl]="lastName" placeholder="Enter your last name" />
+            <br>
+            <label for="DateOfBirth">Date of birth:</label>
+            <input type="date" id="DateOfBirth" [formControl]="dateOfBirth" [max]="maxBirthDate" />
+            @if (dateOfBirth.errors?.['underage'] && dateOfBirth.touched) {
+            <span class="inline-error">You must be at least 18 years old.</span>
+            }
+            <br>
+            <label for="Gender">Gender:</label>
+            <select id="Gender" [formControl]="gender">
+                <option value="" disabled>Select your gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+            </select>
+            <br>
+            <label for="TaxIdType">Tax ID type:</label>
+            <select id="TaxIdType" [formControl]="taxIdType">
+                <option value="" disabled>Select your tax ID type</option>
+                <option value="SSN">SSN (Social Security Number)</option>
+                <option value="ITIN">ITIN (Individual Taxpayer Identification Number)</option>
+                <option value="EIN">EIN (Employer Identification Number)</option>
+            </select>
+            <br>
+            <label for="TaxIdNumber">Tax ID number:</label>
+            <input type="password" id="TaxIdNumber" [formControl]="taxIdNumber" placeholder="9 digits" autocomplete="off" />
+            @if (taxIdNumber.errors?.['taxIdFormat'] && taxIdNumber.touched) {
+            <span class="inline-error">Enter exactly 9 digits (dashes allowed).</span>
+            }
+            <br>
+            <div class="address-container">
+                <label for="ResidentialAddress">Residential address:</label>
+                <input type="text" id="ResidentialAddress" [formControl]="residentialAddress"
+                    placeholder="1633 Main Street, Springfield, IL, 62701"
+                    (focus)="showModal('address')"
+                    (blur)="hideModal()" />
+                <div id="addressModal" class="modal" [class.show]="activeModal === 'address'">
+                    <div class="modal-content">
+                        <ul class="modal-text">
+                            <li><strong>Address format:</strong></li>
+                            <li>number street name, City, State/Province, ZIP code</li>
+                            <li>Example: 1633 Main Street, Springfield, IL, 62701</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <br>
+            <label for="CountryOfResidence">Country of residence:</label>
+            <select id="CountryOfResidence" [formControl]="countryOfResidence">
+                <option value="" disabled>Select your country of residence</option>
+                @for (c of countries; track c.code) {
+                <option [value]="c.code">{{ c.name }}</option>
+                }
+            </select>
+            <br>
+            <label for="CountryOfCitizenship">Country of citizenship:</label>
+            <select id="CountryOfCitizenship" [formControl]="countryOfCitizenship">
+                <option value="" disabled>Select your country of citizenship</option>
+                @for (c of countries; track c.code) {
+                <option [value]="c.code">{{ c.name }}</option>
+                }
+            </select>
+            <br>
+            <label for="Occupation">Occupation:</label>
+            <input type="text" id="Occupation" [formControl]="occupation" placeholder="What is your occupation?" />
+            <br>
+            <label for="Employer">Employer:</label>
+            <input type="text" id="Employer" [formControl]="employer" placeholder="What is your employer?" />
+            <br>
+            <button type="submit" class="button">Sign up</button>
+            <a class="link" routerLink="/user/login">Already have an account? Log in</a>
+            <a class="link" routerLink="/">Back to home</a>
+        </div>
+    </div>
+</form>

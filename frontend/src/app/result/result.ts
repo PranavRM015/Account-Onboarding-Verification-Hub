@@ -65,7 +65,7 @@ export class Result implements OnInit {
     console.error('Result request failed:', error);
     if (error.status === 401) {
       alert('Your session has expired. Please log in again.');
-      this.router.navigate(['/login']);
+      this.router.navigate(['/admin/login']);
       return;
     }
     const detail = typeof error.error === 'string' ? error.error : error.error?.title;

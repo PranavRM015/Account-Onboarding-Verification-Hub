@@ -1,0 +1,5 @@
+<div class="my-box">
+    <h1 class="text">Welcome{{ username() ? ', ' + username() : '' }}!</h1>
+    <p>You are signed in as a user.</p>
+    <button type="button" class="button" (click)="logout()">Log out</button>
+</div>

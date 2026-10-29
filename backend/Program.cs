@@ -3,7 +3,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Admins;
 using AdminControlNamespace;
-using AdminRepo;
+using AccountSecurity;
+using PasswordHasherNamespace;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using JwtTokens;
@@ -164,9 +165,20 @@ public class Program
             {
                 return;
             }
-            var connectionString = app.Configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
-            new AdminRepository(connectionString).AddAdmin(username, password);
+            // The first admin has no personal details on file, so they get placeholders; the SSN hash only has to be unique.
+            db.Admins.Add(new Admin(username, PasswordHasher.PasswordHash(password))
+            {
+                FirstName = "Bootstrap",
+                LastName = "Admin",
+                DateOfBirth = new DateTime(1900, 1, 1),
+                Gender = "Other",
+                SSNHash = PasswordHasher.TaxIdHash("bootstrap-" + username, app.Configuration["TaxIdHashPepper"]!),
+                IsCitizen = true,
+                CountryOfCitizenship = "US",
+                PasswordRecoveryQuestion = RecoveryQuestions.All[0],
+                PasswordRecoveryAnswer = "!", // never matches, so recovery is off until the admin sets a real answer
+            });
+            db.SaveChanges();
             app.Logger.LogInformation("Created the first admin '{Username}'.", username);
         }
         catch (Exception ex)

@@ -27,7 +27,7 @@ namespace ReviewControlNamespace
     }
 
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     [Route("api/admins/tickets")]
     public class ReviewController : ControllerBase
     {

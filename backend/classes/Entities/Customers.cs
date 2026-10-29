@@ -1,4 +1,5 @@
 using System;
+using AccountSecurity;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using FluentValidation;
@@ -6,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Customers{
-    public class Customer
+    public class Customer : ILoginAccount
     {
         [Key, DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int CustomerId { get; set; }
@@ -36,6 +37,16 @@ namespace Customers{
         public string Occupation { get; set; } = string.Empty;
         [MaxLength(100)]
         public string Employer { get; set; } = string.Empty;
+        [MaxLength(100)]
+        public string Username { get; set; } = string.Empty;
+        [MaxLength(200)]
+        public string PasswordHash { get; set; } = string.Empty;
+        [MaxLength(100)]
+        public string PasswordRecoveryQuestion { get; set; } = string.Empty;
+        [MaxLength(100)]
+        public string PasswordRecoveryAnswer { get; set; } = string.Empty; // salted hash of the answer
+        public int FailedLoginCount { get; set; }
+        public DateTime? LockoutEnd { get; set; }
     }
     public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
@@ -51,6 +62,9 @@ namespace Customers{
             builder.HasIndex(c => c.TaxIdHash)
                 .IsUnique()
                 .HasDatabaseName("UX_Customers_TaxIdHash");
+            builder.HasIndex(c => c.Username)
+                .IsUnique()
+                .HasDatabaseName("UX_Customers_Username");
         }
     }
 
@@ -81,6 +95,11 @@ namespace Customers{
             RuleFor(x => x.CountryOfCitizenship).NotEmpty().Length(2);
             RuleFor(x => x.Occupation).NotEmpty().MaximumLength(100);
             RuleFor(x => x.Employer).NotEmpty().MaximumLength(100);
+            RuleFor(x => x.Username).NotEmpty().MinimumLength(3).MaximumLength(40);
+            RuleFor(x => x.PasswordHash).NotEmpty().MaximumLength(200);
+            RuleFor(x => x.PasswordRecoveryQuestion).Must(RecoveryQuestions.IsValid)
+                .WithMessage("Choose one of the password recovery questions.");
+            RuleFor(x => x.PasswordRecoveryAnswer).NotEmpty().MaximumLength(100);
         }
     }
 }

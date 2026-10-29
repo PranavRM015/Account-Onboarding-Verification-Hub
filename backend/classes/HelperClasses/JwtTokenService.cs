@@ -7,6 +7,8 @@ namespace JwtTokens
 {
     public class JwtTokenService
     {
+        // Tokens carry the role (Admin or User) under this claim name; controllers check it with [Authorize(Roles = ...)].
+        public const string RoleClaim = "role";
         private readonly SymmetricSecurityKey _key;
         private readonly string _issuer;
         private readonly string _audience;
@@ -42,10 +44,11 @@ namespace JwtTokens
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30),
             NameClaimType = JwtRegisteredClaimNames.Name,
+            RoleClaimType = RoleClaim,
         };
 
         // Every token gets a unique jti so that logout can revoke exactly this one.
-        public (string Token, DateTime ExpiresAt) Issue(string username)
+        public (string Token, DateTime ExpiresAt) Issue(string username, string role)
         {
             var expiresAt = DateTime.UtcNow.Add(_lifetime);
             var token = new JwtSecurityToken(
@@ -54,6 +57,7 @@ namespace JwtTokens
                 new[]
                 {
                     new Claim(JwtRegisteredClaimNames.Name, username),
+                    new Claim(RoleClaim, role),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString("N")),
                 },
                 notBefore: DateTime.UtcNow,

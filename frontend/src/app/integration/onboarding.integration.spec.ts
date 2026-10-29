@@ -5,6 +5,7 @@ import { Router, provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { routes } from '../app';
 import { flagLabel, TicketDetails } from '../ticket/ticketDetails';
+import { recoveryQuestions } from '../shared/form-rules';
 
 interface Scenario {
   name: string;
@@ -48,6 +49,24 @@ const scenarios: Scenario[] = [
 
 const credentials = { username: 'reviewer_one', password: 'Str0ng!Passw0rd#2026' };
 const address = '1633 Main Street, Springfield, IL, 62701';
+const adminProfile = {
+  firstName: 'Alex',
+  middleName: '',
+  lastName: 'Reviewer',
+  dateOfBirth: '1990-05-20',
+  gender: 'Other',
+  ssn: '123-45-6789',
+  isCitizen: false,
+  countryOfCitizenship: 'US',
+  passwordRecoveryQuestion: recoveryQuestions[0],
+  passwordRecoveryAnswer: 'Pizza',
+};
+const customerLogin = {
+  username: 'casey_customer',
+  password: 'Cust0mer!Passw0rd#1',
+  passwordRecoveryQuestion: recoveryQuestions[2],
+  passwordRecoveryAnswer: 'Rex',
+};
 const ticketId = 41;
 const customerId = 17;
 
@@ -147,24 +166,42 @@ describe('Onboarding integration with mocked HTTP', () => {
 
   const text = () => harness.routeNativeElement?.textContent ?? '';
 
-  const signUpAndLogIn = async () => {
-    await harness.navigateByUrl('/signup');
+  const fillAdminSignup = (password = credentials.password) => {
     enter('#Username', credentials.username);
-    enter('#Password', credentials.password);
+    enter('#Password', password);
+    enter('#FirstName', adminProfile.firstName);
+    enter('#LastName', adminProfile.lastName);
+    enter('#DateOfBirth', adminProfile.dateOfBirth);
+    enter('#Gender', adminProfile.gender);
+    enter('#Ssn', adminProfile.ssn);
+    enter('#CountryOfCitizenship', adminProfile.countryOfCitizenship);
+    enter('#RecoveryQuestion', adminProfile.passwordRecoveryQuestion);
+    enter('#RecoveryAnswer', adminProfile.passwordRecoveryAnswer);
+  };
+
+  const logIn = async (role: 'admin' | 'user', username = credentials.username, password = credentials.password) => {
+    await harness.navigateByUrl(`/${role}/login`);
+    enter('#Username', username);
+    enter('#Password', password);
+    await clickButton('Log in');
+    const login = http.expectOne(`/api/${role}s/login`);
+    expect(login.request.body).toEqual({ username, password });
+    login.flush({
+      message: 'ok', username, role: role === 'admin' ? 'Admin' : 'User', token: 'test-token', expiresAt: '2099-01-01T00:00:00Z',
+    });
+    await settle();
+  };
+
+  const signUpAndLogIn = async () => {
+    await harness.navigateByUrl('/admin/signup');
+    fillAdminSignup();
     await clickButton('Sign up');
     const signup = http.expectOne('/api/admins/signup');
-    expect(signup.request.body).toEqual(credentials);
+    expect(signup.request.body).toEqual({ username: credentials.username, password: credentials.password, ...adminProfile });
     signup.flush('created');
     await settle();
 
-    await harness.navigateByUrl('/login');
-    enter('#Username', credentials.username);
-    enter('#Password', credentials.password);
-    await clickButton('Log in');
-    const login = http.expectOne('/api/admins/login');
-    expect(login.request.body).toEqual(credentials);
-    login.flush({ message: 'ok', username: credentials.username, token: 'test-token', expiresAt: '2099-01-01T00:00:00Z' });
-    await settle();
+    await logIn('admin');
     expect(TestBed.inject(Router).url).toBe('/inputForm');
   };
 
@@ -182,6 +219,10 @@ describe('Onboarding integration with mocked HTTP', () => {
     enter('#countryOfCitizenship', s.citizenship);
     enter('#occupation', s.occupation);
     enter('#Employer', s.employer);
+    enter('#CustomerUsername', customerLogin.username);
+    enter('#CustomerPassword', customerLogin.password);
+    enter('#recoveryQuestion', customerLogin.passwordRecoveryQuestion);
+    enter('#recoveryAnswer', customerLogin.passwordRecoveryAnswer);
     await settle();
     expect(field('button[type=submit]').hasAttribute('disabled')).toBeFalse();
     await clickButton('Submit');
@@ -199,6 +240,7 @@ describe('Onboarding integration with mocked HTTP', () => {
       Employer: s.employer,
       typeOfAccount: 'Individual',
       jointCustomerId: null,
+      ...customerLogin,
     }));
     submit.flush({ message: 'Customer saved', customerId, ticketId, riskRating: s.rating, flags: s.flags });
     await settle();
@@ -224,6 +266,7 @@ describe('Onboarding integration with mocked HTTP', () => {
     });
     spyOn(window, 'alert');
     localStorage.removeItem('authToken');
+    localStorage.removeItem('authRole');
     harness = await RouterTestingHarness.create();
     http = TestBed.inject(HttpTestingController);
   });
@@ -319,50 +362,214 @@ describe('Onboarding integration with mocked HTTP', () => {
 
   describe('signup and login', () => {
     it('does not send a weak password to the server', async () => {
-      await harness.navigateByUrl('/signup');
-      enter('#Username', credentials.username);
-      enter('#Password', 'password');
+      await harness.navigateByUrl('/admin/signup');
+      fillAdminSignup('password');
+      await clickButton('Sign up');
+      http.expectNone('/api/admins/signup');
+    });
+
+    it('does not send an admin signup that is missing the recovery answer', async () => {
+      await harness.navigateByUrl('/admin/signup');
+      fillAdminSignup();
+      enter('#RecoveryAnswer', '');
       await clickButton('Sign up');
       http.expectNone('/api/admins/signup');
     });
 
     it('tells the admin when the username is already taken', async () => {
-      await harness.navigateByUrl('/signup');
-      enter('#Username', credentials.username);
-      enter('#Password', credentials.password);
+      await harness.navigateByUrl('/admin/signup');
+      fillAdminSignup();
       await clickButton('Sign up');
       http.expectOne('/api/admins/signup').flush('taken', { status: 409, statusText: 'Conflict' });
       await settle();
-      expect(window.alert).toHaveBeenCalledWith('That username is already taken.');
+      expect(window.alert).toHaveBeenCalledWith('taken');
     });
 
     it('tells the admin to wait after too many login attempts', async () => {
-      await harness.navigateByUrl('/login');
+      await harness.navigateByUrl('/admin/login');
       enter('#Username', credentials.username);
       enter('#Password', credentials.password);
       await clickButton('Log in');
       http.expectOne('/api/admins/login').flush('slow down', { status: 429, statusText: 'Too Many Requests' });
       await settle();
       expect(window.alert).toHaveBeenCalledWith('Too many attempts. Please wait a minute and try again.');
-      expect(TestBed.inject(Router).url).toBe('/login');
+      expect(TestBed.inject(Router).url).toBe('/admin/login');
     });
 
     it('stays on the login page when the password is wrong', async () => {
-      await harness.navigateByUrl('/login');
+      await harness.navigateByUrl('/admin/login');
       enter('#Username', credentials.username);
       enter('#Password', credentials.password);
       await clickButton('Log in');
       http.expectOne('/api/admins/login').flush('no', { status: 401, statusText: 'Unauthorized' });
       await settle();
       expect(window.alert).toHaveBeenCalledWith('Invalid username or password.');
-      expect(TestBed.inject(Router).url).toBe('/login');
+      expect(TestBed.inject(Router).url).toBe('/admin/login');
+    });
+
+    it('shows how long the account is locked for after three wrong passwords', async () => {
+      await harness.navigateByUrl('/admin/login');
+      enter('#Username', credentials.username);
+      enter('#Password', credentials.password);
+      await clickButton('Log in');
+      http.expectOne('/api/admins/login').flush(
+        'Too many failed attempts. This account is locked for 15 more minutes.',
+        { status: 423, statusText: 'Locked' },
+      );
+      await settle();
+      expect(window.alert).toHaveBeenCalledWith('Too many failed attempts. This account is locked for 15 more minutes.');
+      expect(TestBed.inject(Router).url).toBe('/admin/login');
+      expect(localStorage.getItem('authToken')).toBeNull();
+    });
+  });
+
+  describe('users', () => {
+    it('signs a user up with their details and recovery question', async () => {
+      await harness.navigateByUrl('/user/signup');
+      enter('#Username', customerLogin.username);
+      enter('#Password', customerLogin.password);
+      enter('#RecoveryQuestion', customerLogin.passwordRecoveryQuestion);
+      enter('#RecoveryAnswer', customerLogin.passwordRecoveryAnswer);
+      enter('#FirstName', 'Casey');
+      enter('#LastName', 'Customer');
+      enter('#DateOfBirth', '1985-04-12');
+      enter('#Gender', 'Other');
+      enter('#TaxIdType', 'SSN');
+      enter('#TaxIdNumber', '123-45-6789');
+      enter('#ResidentialAddress', address);
+      enter('#CountryOfResidence', 'US');
+      enter('#CountryOfCitizenship', 'US');
+      enter('#Occupation', 'Teacher');
+      enter('#Employer', 'City Public School');
+      await clickButton('Sign up');
+
+      const signup = http.expectOne('/api/users/signup');
+      expect(signup.request.body).toEqual(jasmine.objectContaining({ ...customerLogin, firstName: 'Casey', taxIdNumber: '123-45-6789' }));
+      signup.flush('created');
+      await settle();
+      expect(TestBed.inject(Router).url).toBe('/user/login');
+    });
+
+    it('logs a user in to the user home page, not the admin tools', async () => {
+      await logIn('user', customerLogin.username, customerLogin.password);
+
+      expect(TestBed.inject(Router).url).toBe('/user/home');
+      expect(localStorage.getItem('authRole')).toBe('User');
+      http.expectOne('/api/users/me').flush({ username: customerLogin.username, role: 'User' });
+    });
+
+    it('keeps a signed-in user out of the admin pages', async () => {
+      await logIn('user', customerLogin.username, customerLogin.password);
+      http.expectOne('/api/users/me').flush({ username: customerLogin.username, role: 'User' });
+
+      await harness.navigateByUrl('/inputForm');
+
+      expect(TestBed.inject(Router).url).toBe('/user/home');
+    });
+
+    it('keeps a signed-in admin out of the user home page', async () => {
+      await signUpAndLogIn();
+
+      await harness.navigateByUrl('/user/home');
+
+      expect(TestBed.inject(Router).url).toBe('/inputForm');
+    });
+
+    it('sends a signed-out visitor from the user home page to the user login', async () => {
+      await harness.navigateByUrl('/user/home');
+      expect(TestBed.inject(Router).url).toBe('/user/login');
+    });
+  });
+
+  describe('password recovery', () => {
+    const recover = async (role: 'admin' | 'user') => {
+      await harness.navigateByUrl(`/${role}/login`);
+      const link = harness.routeNativeElement!.querySelector<HTMLAnchorElement>('#forgotPassword');
+      expect(link).withContext('the Forgot my password link').not.toBeNull();
+      link!.click();
+      await settle();
+      expect(TestBed.inject(Router).url).toBe(`/forgot-password/${role}`);
+    };
+
+    for (const role of ['admin', 'user'] as const) {
+      it(`asks the ${role} their question and sets a new password`, async () => {
+        await recover(role);
+        enter('#Username', credentials.username);
+        await clickButton('Continue');
+        const lookup = http.expectOne((r) => r.url === `/api/${role}s/recovery-question`);
+        expect(lookup.request.params.get('username')).toBe(credentials.username);
+        lookup.flush({ question: recoveryQuestions[3] });
+        await settle();
+        expect(text()).toContain(recoveryQuestions[3]);
+
+        enter('#Answer', 'Hawaii');
+        enter('#NewPassword', 'Brand#New9Passw0rd');
+        enter('#ConfirmPassword', 'Brand#New9Passw0rd');
+        await clickButton('Change password');
+        const reset = http.expectOne(`/api/${role}s/reset-password`);
+        expect(reset.request.body).toEqual({ username: credentials.username, answer: 'Hawaii', newPassword: 'Brand#New9Passw0rd' });
+        reset.flush({ message: 'Password updated' });
+        await settle();
+        expect(TestBed.inject(Router).url).toBe(`/${role}/login`);
+      });
+    }
+
+    it('shows a message and stays put when the answer is wrong', async () => {
+      await recover('user');
+      enter('#Username', credentials.username);
+      await clickButton('Continue');
+      http.expectOne((r) => r.url === '/api/users/recovery-question').flush({ question: recoveryQuestions[0] });
+      await settle();
+      enter('#Answer', 'Sushi');
+      enter('#NewPassword', 'Brand#New9Passw0rd');
+      enter('#ConfirmPassword', 'Brand#New9Passw0rd');
+      await clickButton('Change password');
+      http.expectOne('/api/users/reset-password').flush('Incorrect answer.', { status: 401, statusText: 'Unauthorized' });
+      await settle();
+
+      expect(text()).toContain('That answer is not right');
+      expect(TestBed.inject(Router).url).toBe('/forgot-password/user');
+    });
+
+    it('shows the lockout message when too many wrong answers were given', async () => {
+      await recover('admin');
+      enter('#Username', credentials.username);
+      await clickButton('Continue');
+      http.expectOne((r) => r.url === '/api/admins/recovery-question').flush({ question: recoveryQuestions[0] });
+      await settle();
+      enter('#Answer', 'Sushi');
+      enter('#NewPassword', 'Brand#New9Passw0rd');
+      enter('#ConfirmPassword', 'Brand#New9Passw0rd');
+      await clickButton('Change password');
+      http.expectOne('/api/admins/reset-password').flush('This account is locked for 15 more minutes.', { status: 423, statusText: 'Locked' });
+      await settle();
+
+      expect(text()).toContain('locked for 15 more minutes');
+    });
+
+    it('does not send mismatched or weak passwords', async () => {
+      await recover('user');
+      enter('#Username', credentials.username);
+      await clickButton('Continue');
+      http.expectOne((r) => r.url === '/api/users/recovery-question').flush({ question: recoveryQuestions[0] });
+      await settle();
+      enter('#Answer', 'Pizza');
+      enter('#NewPassword', 'Brand#New9Passw0rd');
+      enter('#ConfirmPassword', 'Different#9Passw0rd');
+      await clickButton('Change password');
+      expect(text()).toContain('do not match');
+
+      enter('#NewPassword', 'weak');
+      enter('#ConfirmPassword', 'weak');
+      await clickButton('Change password');
+      http.expectNone('/api/users/reset-password');
     });
   });
 
   describe('logging out', () => {
     it('sends a signed-out visitor to the login page instead of a protected page', async () => {
       await harness.navigateByUrl('/inputForm');
-      expect(TestBed.inject(Router).url).toBe('/login');
+      expect(TestBed.inject(Router).url).toBe('/admin/login');
     });
 
     it('revokes the token and returns to the home page from the result screen', async () => {

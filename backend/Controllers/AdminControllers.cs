@@ -16,6 +16,7 @@ using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
 using Admins;
+using AccountSecurity;
 using Flags;
 using MockVendor;
 using JwtTokens;
@@ -46,43 +47,102 @@ namespace AdminControlNamespace
         public string Employer { get; set; } = string.Empty;
         public string typeOfAccount { get; set; } = string.Empty;
         public int? jointCustomerId { get; set; }
+        // The admin signs the customer up, so the customer's login details are entered here too.
+        public string username { get; set; } = string.Empty;
+        public string password { get; set; } = string.Empty;
+        public string passwordRecoveryQuestion { get; set; } = string.Empty;
+        public string passwordRecoveryAnswer { get; set; } = string.Empty;
+    }
+    public class AdminSignupInformation
+    {
+        public string username { get; set; } = string.Empty;
+        public string password { get; set; } = string.Empty;
+        public string firstName { get; set; } = string.Empty;
+        public string? middleName { get; set; }
+        public string lastName { get; set; } = string.Empty;
+        public DateTime dateOfBirth { get; set; }
+        public string gender { get; set; } = string.Empty;
+        public string ssn { get; set; } = string.Empty;
+        public bool isCitizen { get; set; }
+        public string countryOfCitizenship { get; set; } = string.Empty;
+        public string passwordRecoveryQuestion { get; set; } = string.Empty;
+        public string passwordRecoveryAnswer { get; set; } = string.Empty;
     }
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = Roles.Admin)]
     [Route("api/admins")]
     public class AdminSignupController : ControllerBase
     {
-        private readonly string _connectionString;
+        private readonly AppDbContext _db;
         private readonly ILogger<AdminSignupController> _logger;
+        private readonly string _taxIdPepper;
 
-        public AdminSignupController(IConfiguration configuration, ILogger<AdminSignupController> logger)
+        public AdminSignupController(AppDbContext db, IConfiguration configuration, ILogger<AdminSignupController> logger)
         {
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
+            _db = db;
+            _taxIdPepper = configuration["TaxIdHashPepper"]
+                ?? throw new InvalidOperationException("'TaxIdHashPepper' is not configured.");
             _logger = logger;
         }
 
         [AllowAnonymous]
         [EnableRateLimiting("auth")]
         [HttpPost("signup")]
-        public IActionResult CreateAdmin([FromBody] information info)
+        public async Task<IActionResult> CreateAdmin([FromBody] AdminSignupInformation info)
         {
             var username = info.username?.Trim() ?? string.Empty;
             var password = info.password ?? string.Empty;
+            var ssn = new string((info.ssn ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
 
-            if (username.Length == 0 || username.Length > 100 || password.Length == 0)
+            if (username.Length < 3 || username.Length > 40)
             {
-                return BadRequest("A username (max 100 characters) and a password are required.");
+                return BadRequest("A username of 3 to 40 characters is required.");
+            }
+            if (!PasswordPolicy.IsValid(password))
+            {
+                return BadRequest(PasswordPolicy.Message);
+            }
+            if (ssn.Length != 9 || !ssn.All(char.IsDigit))
+            {
+                return BadRequest("An SSN of exactly 9 digits is required.");
+            }
+            var admin = new Admin(username, PasswordHasher.PasswordHash(password))
+            {
+                FirstName = info.firstName?.Trim() ?? string.Empty,
+                MiddleName = string.IsNullOrWhiteSpace(info.middleName) ? null : info.middleName.Trim(),
+                LastName = info.lastName?.Trim() ?? string.Empty,
+                DateOfBirth = info.dateOfBirth.Date,
+                Gender = info.gender?.Trim() ?? string.Empty,
+                SSNHash = PasswordHasher.TaxIdHash(ssn, _taxIdPepper),
+                IsCitizen = info.isCitizen,
+                CountryOfCitizenship = info.countryOfCitizenship?.Trim().ToUpperInvariant() ?? string.Empty,
+                PasswordRecoveryQuestion = info.passwordRecoveryQuestion?.Trim() ?? string.Empty,
+                PasswordRecoveryAnswer = string.IsNullOrWhiteSpace(info.passwordRecoveryAnswer)
+                    ? string.Empty
+                    : RecoveryQuestions.Hash(info.passwordRecoveryAnswer),
+            };
+            var validation = new AdminValidator().Validate(admin);
+            if (!validation.IsValid)
+            {
+                return BadRequest(string.Join(" ", validation.Errors.Select(e => e.ErrorMessage)));
             }
             try
             {
-                var adminRepository = new AdminRepository(_connectionString);
-                adminRepository.AddAdmin(username, password);
+                if (await _db.Admins.AnyAsync(a => a.Username == username))
+                {
+                    return Conflict("That username is already taken.");
+                }
+                if (await _db.Admins.AnyAsync(a => a.SSNHash == admin.SSNHash))
+                {
+                    return Conflict("An admin with that SSN already exists.");
+                }
+                _db.Admins.Add(admin);
+                await _db.SaveChangesAsync();
                 return Ok("created");
             }
-            catch (SqlException ex) when (ex.Number == 2627 || ex.Number == 2601) // Unique constraint violation
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
             {
-                return Conflict("That username is already taken.");
+                return Conflict("That username or SSN is already registered.");
             }
             catch (Exception ex)
             {
@@ -95,17 +155,14 @@ namespace AdminControlNamespace
     [Route("api/admins")]
     public class AdminLoginController : ControllerBase
     {
-        private readonly string _connectionString;
         private readonly ILogger<AdminLoginController> _logger;
         private readonly JwtTokenService _tokens;
         private readonly AppDbContext _db;
 
-        public AdminLoginController(IConfiguration configuration, ILogger<AdminLoginController> logger, JwtTokenService tokens, AppDbContext db)
+        public AdminLoginController(ILogger<AdminLoginController> logger, JwtTokenService tokens, AppDbContext db)
         {
             _tokens = tokens;
             _db = db;
-            _connectionString = configuration.GetConnectionString("DefaultConnection")
-                ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
             _logger = logger;
         }
 
@@ -121,20 +178,21 @@ namespace AdminControlNamespace
             }
             try
             {
-                var adminRepository = new AdminRepository(_connectionString);
-                if (!adminRepository.ValidateAdmin(username, password))
+                var admin = await _db.Admins.FirstOrDefaultAsync(a => a.Username == username);
+                var failure = await AccountFlows.CheckPassword(_db, admin, password);
+                if (failure is not null)
                 {
-                    return Unauthorized("Invalid username or password.");
+                    return failure;
                 }
-                var storedUsername = adminRepository.GetStoredUsername(username) ?? username;
+                var storedUsername = admin!.Username;
                 // The JWT is the main sign-in; the session cookie is kept as a fallback. Both carry the admin's name,
-                // which the controllers read for Ticket.AssignedTo.
+                // which the controllers read for Ticket.AssignedTo, and the Admin role.
                 var identity = new ClaimsIdentity(
-                    new[] { new Claim(ClaimTypes.Name, storedUsername) },
+                    new[] { new Claim(ClaimTypes.Name, storedUsername), new Claim(ClaimTypes.Role, Roles.Admin) },
                     CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
-                var (token, expiresAt) = _tokens.Issue(storedUsername);
-                return Ok(new { message = "Admin logged in successfully", username = storedUsername, token, expiresAt });
+                var (token, expiresAt) = _tokens.Issue(storedUsername, Roles.Admin);
+                return Ok(new { message = "Admin logged in successfully", username = storedUsername, role = Roles.Admin, token, expiresAt });
             }
             catch (Exception ex)
             {
@@ -143,7 +201,33 @@ namespace AdminControlNamespace
             }
         }
 
-        // Revokes the JWT that made this request and clears the cookie, so neither can be used again.
+        // Step 1 of password recovery: the question to answer.
+        [EnableRateLimiting("auth")]
+        [HttpGet("recovery-question")]
+        public async Task<IActionResult> RecoveryQuestion([FromQuery] string username)
+        {
+            username = username?.Trim() ?? string.Empty;
+            if (username.Length == 0)
+            {
+                return BadRequest("A username is required.");
+            }
+            return AccountFlows.RecoveryQuestion(await _db.Admins.FirstOrDefaultAsync(a => a.Username == username), username);
+        }
+
+        // Step 2: the answer plus the new password.
+        [EnableRateLimiting("auth")]
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] RecoveryAnswerRequest request)
+        {
+            var username = request.username?.Trim() ?? string.Empty;
+            if (username.Length == 0)
+            {
+                return BadRequest("A username is required.");
+            }
+            return await AccountFlows.ResetPassword(_db, await _db.Admins.FirstOrDefaultAsync(a => a.Username == username), request);
+        }
+
+        // Revokes the JWT that made this request and clears the cookie, so neither can be used again. Admins and users both use it.
         [Authorize]
         [HttpPost("logout")]
         public async Task<IActionResult> Logout()
@@ -171,7 +255,7 @@ namespace AdminControlNamespace
         }
     }
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = Roles.Admin)]
     [Route("api/admins/inputForm")]
     public class InputFormController : ControllerBase
     {
@@ -248,7 +332,17 @@ namespace AdminControlNamespace
                     CountryOfCitizenship = info.countryOfCitizenship.Trim().ToUpperInvariant(),
                     Occupation = info.occupation.Trim(),
                     Employer = info.Employer.Trim(),
+                    Username = info.username?.Trim() ?? string.Empty,
+                    PasswordHash = PasswordHasher.PasswordHash(info.password ?? string.Empty),
+                    PasswordRecoveryQuestion = info.passwordRecoveryQuestion?.Trim() ?? string.Empty,
+                    PasswordRecoveryAnswer = string.IsNullOrWhiteSpace(info.passwordRecoveryAnswer)
+                        ? string.Empty
+                        : RecoveryQuestions.Hash(info.passwordRecoveryAnswer),
                 };
+                if (!PasswordPolicy.IsValid(info.password))
+                {
+                    return BadRequest(PasswordPolicy.Message);
+                }
                 var validation = new CustomerValidator().Validate(customer);
                 if (!validation.IsValid)
                 {
@@ -307,8 +401,12 @@ namespace AdminControlNamespace
             }
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
             {
-                // Tell the admin which customer already has this tax ID so they can use it as a joint holder.
                 _db.ChangeTracker.Clear();
+                if (_db.Customers.Any(c => c.Username == info.username.Trim()))
+                {
+                    return Conflict(new { message = "That username is already taken." });
+                }
+                // Tell the admin which customer already has this tax ID so they can use it as a joint holder.
                 var existingId = _db.Customers.Where(c => c.TaxIdHash == taxIdHash).Select(c => c.CustomerId).FirstOrDefault();
                 return Conflict(new { message = "A customer with that tax ID already exists.", customerId = existingId });
             }

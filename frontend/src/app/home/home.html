@@ -1,25 +1,18 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup</title>
-    <link rel="stylesheet" href="../../styles.css">
-</head>
-<body>
-
-<div class="my-box">
-  <h1 class="text">Welcome to the Account Onboarding Verification Hub!</h1>
-  <div class="choices">
-    <div class="choice">
-      <span>Signup</span>
-      <br>
-      <span>Login</span>
+<div class="home">
+    <h1 class="text">Welcome to the Account Onboarding Verification Hub!</h1>
+    <p>Who are you signing in as?</p>
+    <div class="cards">
+        <section class="card" id="userCard">
+            <h2>User</h2>
+            <p>Customers opening an account.</p>
+            <a class="card-button" id="userLoginButton" routerLink="/user/login">Log in as user</a>
+            <a class="card-button outline" id="userSignupButton" routerLink="/user/signup">Sign up as user</a>
+        </section>
+        <section class="card" id="adminCard">
+            <h2>Admin</h2>
+            <p>Staff who review and approve onboarding.</p>
+            <a class="card-button" id="adminLoginButton" routerLink="/admin/login">Log in as admin</a>
+            <a class="card-button outline" id="adminSignupButton" routerLink="/admin/signup">Sign up as admin</a>
+        </section>
     </div>
-    <div class="choice">
-      <button type="button" id="signupButton" routerLink="/signup">Sign up</button>
-      <br>
-      <button type="button" id="loginButton" routerLink="/login">Log in</button>
-    </div>
-  </div>
 </div>

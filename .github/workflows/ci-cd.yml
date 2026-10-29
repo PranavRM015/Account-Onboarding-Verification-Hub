@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 env:
-  SA_PASSWORD: Ci-Test-Passw0rd-2026
-  TEST_CONNECTION: Server=localhost,1433;Database=VerificationHubDB;User Id=sa;Password=Ci-Test-Passw0rd-2026;TrustServerCertificate=True;
+  SA_PASSWORD: ${{ secrets.CI_SA_PASSWORD }}
+  TEST_CONNECTION: Server=localhost,1433;Database=VerificationHubDB;User Id=sa;Password=${{ secrets.CI_SA_PASSWORD }};TrustServerCertificate=True;
 
 jobs:
   test:

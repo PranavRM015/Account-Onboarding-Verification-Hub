@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -19,7 +19,7 @@ namespace backend.Tests
             var username = $"logout_{Guid.NewGuid():N}"[..20];
             _hub.TrackAdmin(username);
             var client = _hub.NewClient();
-            var signup = await client.PostAsJsonAsync("/api/admins/signup", new { username, password = HubFixture.Password });
+            var signup = await client.PostAsJsonAsync("/api/admins/signup", _hub.AdminBody(username));
             Assert.Equal(HttpStatusCode.OK, signup.StatusCode);
             var login = await client.PostAsJsonAsync("/api/admins/login", new { username, password = HubFixture.Password });
             Assert.Equal(HttpStatusCode.OK, login.StatusCode);
@@ -103,7 +103,7 @@ namespace backend.Tests
             var client = _hub.NewClient();
             var username = $"cookie_{Guid.NewGuid():N}"[..20];
             _hub.TrackAdmin(username);
-            await client.PostAsJsonAsync("/api/admins/signup", new { username, password = HubFixture.Password });
+            await client.PostAsJsonAsync("/api/admins/signup", _hub.AdminBody(username));
             await client.PostAsJsonAsync("/api/admins/login", new { username, password = HubFixture.Password });
 
             Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/admins/inputForm/customers/1/exists")).StatusCode);

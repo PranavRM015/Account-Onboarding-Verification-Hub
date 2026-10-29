@@ -1,16 +1,26 @@
 import { Component, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { FormsModule, ReactiveFormsModule } from '@angular/forms';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthService, LoginResponse } from '../auth/auth.service';
+import { passwordControl, serverMessage, usernameControl } from '../shared/form-rules';
 
+// One login screen for both roles. The route's data says which one: /admin/login or /user/login.
 @Component({
-  imports: [FormsModule, ReactiveFormsModule],
+  imports: [FormsModule, ReactiveFormsModule, RouterLink],
   selector: 'app-login',
   styleUrl: './login.css',
   templateUrl: './login.html',
 })
 export class Login {
+  private http = inject(HttpClient);
+  private router = inject(Router);
+  private auth = inject(AuthService);
+
+  readonly role: 'admin' | 'user' = inject(ActivatedRoute).snapshot.data['role'] === 'user' ? 'user' : 'admin';
+  readonly audience = this.role === 'admin' ? 'an admin' : 'a user';
+  private readonly endpoint = this.role === 'admin' ? '/api/admins/login' : '/api/users/login';
+
   activeModal: 'username' | 'password' | null = null;
 
   showModal(which: string): void {
@@ -21,51 +31,30 @@ export class Login {
     this.activeModal = null;
   }
 
-  readonly username = new FormControl('', {
-    nonNullable: true,
-    validators: [Validators.required, Validators.minLength(3), Validators.maxLength(40)],
-  });
-  readonly password = new FormControl('', {
-    nonNullable: true,
-    validators: [
-      Validators.required,
-      Validators.minLength(8),
-      Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).+$/),
-    ],
-  });
-  
-  private http = inject(HttpClient);
-  private router = inject(Router);
-  private route = inject(ActivatedRoute);
-  private auth = inject(AuthService);
+  readonly username = usernameControl();
+  readonly password = passwordControl();
 
-  acceptAdminCredentials(): void {
-    console.log('Form submitted!');
+  acceptCredentials(): void {
     if (this.username.invalid) { this.activeModal = 'username'; return; }
     if (this.password.invalid) { this.activeModal = 'password'; return; }
 
-    const username = this.username.value;
-    const password = this.password.value;
-    const requestBody = { username, password };
-    console.log('Submitting login request:', {
-      username: requestBody.username,
-      passwordPresent: !!requestBody.password
-    });
+    const requestBody = { username: this.username.value, password: this.password.value };
 
-    this.http.post<LoginResponse>('/api/admins/login', requestBody).subscribe({
+    this.http.post<LoginResponse>(this.endpoint, requestBody).subscribe({
       next: (response) => {
-        console.log('Admin logged in successfully:', response.username);
-        this.auth.saveToken(response.token);
-        this.router.navigate(['/inputForm']);
+        this.auth.saveSession(response.token, this.role === 'admin' ? 'Admin' : 'User');
+        this.router.navigate([this.role === 'admin' ? '/inputForm' : '/user/home']);
       },
-      error: (error) =>{
-        console.error('Login failed:', error);
+      error: (error) => {
         if (error.status === 429) {
           alert('Too many attempts. Please wait a minute and try again.');
-          return;
+        } else if (error.status === 423) {
+          // Three wrong passwords lock the account for 15 minutes; the server says how long is left.
+          alert(serverMessage(error, 'This account is locked for 15 minutes after too many failed attempts.'));
+        } else {
+          alert(error.status === 401 ? 'Invalid username or password.' : 'Login failed. Please try again.');
         }
-        alert(error.status === 401 ? 'Invalid username or password.' : 'Login failed. Please try again.');
-      }
+      },
     });
   }
 }
