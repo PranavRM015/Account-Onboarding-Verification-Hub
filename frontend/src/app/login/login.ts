@@ -42,8 +42,8 @@ export class Login {
 
     this.http.post<LoginResponse>(this.endpoint, requestBody).subscribe({
       next: (response) => {
-        this.auth.saveSession(response.token, this.role === 'admin' ? 'Admin' : 'User');
-        this.router.navigate([this.role === 'admin' ? '/inputForm' : '/user/home']);
+        this.auth.saveSession(response.token, this.role === 'admin' ? 'Admin' : 'User', response.firstName);
+        this.router.navigate([this.role === 'admin' ? '/admin/home' : '/user/home']);
       },
       error: (error) => {
         if (error.status === 429) {

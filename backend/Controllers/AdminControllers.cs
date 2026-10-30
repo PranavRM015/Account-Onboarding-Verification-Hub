@@ -21,6 +21,7 @@ using Flags;
 using MockVendor;
 using JwtTokens;
 using RevokedTokens;
+using TicketIntakeNamespace;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 
@@ -192,7 +193,7 @@ namespace AdminControlNamespace
                     CookieAuthenticationDefaults.AuthenticationScheme);
                 await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, new ClaimsPrincipal(identity));
                 var (token, expiresAt) = _tokens.Issue(storedUsername, Roles.Admin);
-                return Ok(new { message = "Admin logged in successfully", username = storedUsername, role = Roles.Admin, token, expiresAt });
+                return Ok(new { message = "Admin logged in successfully", username = storedUsername, firstName = admin.FirstName, role = Roles.Admin, token, expiresAt });
             }
             catch (Exception ex)
             {
@@ -354,50 +355,13 @@ namespace AdminControlNamespace
                 _db.Customers.Add(customer);
                 _db.SaveChanges(); // generates customer.CustomerId
 
-                var ticket = new Ticket(customer.CustomerId, accountType, assignedTo, jointCustomerId)
+                var (error, body) = TicketIntake.Open(_db, customer, accountType, jointCustomerId, assignedTo);
+                if (error is not null)
                 {
-                    TicketStatus = "Review", // moves straight from Submitted to Review
-                };
-                var ticketValidation = new TicketValidator().Validate(ticket);
-                if (!ticketValidation.IsValid)
-                {
-                    return BadRequest(string.Join(" ", ticketValidation.Errors.Select(e => e.ErrorMessage)));
+                    return error;
                 }
-                _db.Tickets.Add(ticket);
-                _db.SaveChanges(); // generates ticket.TicketId
-
-                var admin = _db.Admins.FirstOrDefault(a => a.Username == assignedTo);
-                if(admin is null){
-                    return Unauthorized("Your admin account is no longer active.");
-                }
-
-                var vendor = new Vendor(customer);
-                var vendorResponse = vendor.Verify(customer, ticket.TicketId);
-                var raisedFlags = new[]
-                {
-                    vendor.CheckVerification(admin, vendorResponse, ticket.TicketId),
-                    vendor.CheckOFACVerification(admin, customer, ticket.TicketId),
-                    vendor.CheckCountryTier(admin, customer, ticket.TicketId),
-                    vendor.CheckIllicitSubstances(admin, customer, ticket.TicketId),
-                }.OfType<Flag>().ToList();
-                ticket.RiskRating = vendor.FinalRiskRating();
-                _db.VendorResponses.Add(vendorResponse);
-                _db.Flags.AddRange(raisedFlags);
-
-                var audit = new AuditTrail(ticket.TicketId, customer.CustomerId, "Submitted", "Review",
-                    "Ticket created", "Submission received");
-                var auditValidation = new AuditTrailValidator().Validate(audit);
-                if (!auditValidation.IsValid)
-                {
-                    return BadRequest(string.Join(" ", auditValidation.Errors.Select(e => e.ErrorMessage)));
-                }
-                _db.AuditTrails.Add(audit);
-                _db.AuditTrails.Add(new AuditTrail(ticket.TicketId, customer.CustomerId, "Review", "Review", "Validation pipeline completed", $"{raisedFlags.Count} flag(s) raised; risk rating {ticket.RiskRating}"));
-                _db.SaveChanges();
-
                 transaction.Commit();
-                return Ok(new { message = "Customer saved", customer.CustomerId, ticket.TicketId, verified = raisedFlags.Count == 0, riskRating = ticket.RiskRating, flags = raisedFlags.Select(f => f.ViolationType), vendorResponse = new { vendorResponse.Score, vendorResponse.RiskCodes } });
-
+                return Ok(body);
             }
             catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
             {

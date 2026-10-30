@@ -3,15 +3,16 @@ import { provideRouter } from '@angular/router';
 import { Home } from './home';
 
 describe('Home', () => {
-  it('offers a login and a signup for users and for admins', async () => {
+  it('offers just a user button and an admin button', async () => {
     await TestBed.configureTestingModule({ imports: [Home], providers: [provideRouter([])] }).compileComponents();
     const fixture = TestBed.createComponent(Home);
     fixture.detectChanges();
-    const href = (id: string) => fixture.nativeElement.querySelector(id).getAttribute('href');
+    const root: HTMLElement = fixture.nativeElement;
+    const href = (id: string) => root.querySelector(id)!.getAttribute('href');
 
-    expect(href('#userLoginButton')).toBe('/user/login');
-    expect(href('#userSignupButton')).toBe('/user/signup');
-    expect(href('#adminLoginButton')).toBe('/admin/login');
-    expect(href('#adminSignupButton')).toBe('/admin/signup');
+    const buttons = Array.from(root.querySelectorAll('a, button'));
+    expect(buttons.map((b) => b.textContent!.trim())).toEqual(['User', 'Admin']);
+    expect(href('#userButton')).toBe('/user');
+    expect(href('#adminButton')).toBe('/admin');
   });
 });

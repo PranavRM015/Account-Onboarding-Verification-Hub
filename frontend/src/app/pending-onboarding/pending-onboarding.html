@@ -1,0 +1,45 @@
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="my-box">
+        <h1>Open a ticket for a customer who signed up</h1>
+
+        @if (loadError()) {
+            <p class="inline-error" id="pendingLoadError">{{ loadError() }}</p>
+            <a class="link" id="backToList" routerLink="/admin/home">Back to the waiting customers</a>
+        } @else if (rows().length === 0) {
+            <p id="pendingDetailsLoading">Loading...</p>
+        } @else {
+            <p class="note">This is what the customer entered. Choose the account type to open their ticket.</p>
+            @for (row of rows(); track row.key) {
+            <div class="fields">
+                <label [for]="'field-' + row.key">{{ row.label }}:</label>
+                <input type="text" [id]="'field-' + row.key" [name]="row.key" [value]="row.value" readonly>
+            </div>
+            <br>
+            }
+            <div class="fields">
+                <label for="typeOfAccount">Individual/Joint?</label>
+                <select id="typeOfAccount" name="accountType" formControlName="typeOfAccount" required>
+                    <option value="" disabled>Select the account type</option>
+                    <option value="Individual">Individual</option>
+                    <option value="Joint">Joint</option>
+                </select>
+            </div>
+            <br>
+            @if (typeOfAccount.value === 'Joint') {
+            <div class="fields">
+                <label for="jointCustomerId">Joint Customer ID:</label>
+                <input type="number" id="jointCustomerId" name="jointCustomerId" formControlName="jointCustomerId"
+                    placeholder="Enter the second holder's customer ID" min="1" step="1">
+            </div>
+            <br>
+            }
+            @if (submitError()) {
+            <p class="inline-error" id="pendingSubmitError">{{ submitError() }}</p>
+            }
+            <div class="fields">
+                <button type="submit" class="button" id="openTicketButton" [disabled]="form.invalid || submitting()">Submit</button>
+            </div>
+            <a class="link" id="backToList" routerLink="/admin/home">Back to the waiting customers</a>
+        }
+    </div>
+</form>

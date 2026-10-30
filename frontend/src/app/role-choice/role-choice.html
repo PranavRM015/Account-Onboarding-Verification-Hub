@@ -1,0 +1,9 @@
+<div class="home">
+    <h1 class="text">{{ title }}</h1>
+    <p>{{ blurb }}</p>
+    <div class="cards">
+        <a class="big-button" id="loginButton" [routerLink]="'/' + role + '/login'">Log in</a>
+        <a class="big-button outline" id="signupButton" [routerLink]="'/' + role + '/signup'">Sign up</a>
+    </div>
+    <a class="back" id="backButton" routerLink="/">Back</a>
+</div>

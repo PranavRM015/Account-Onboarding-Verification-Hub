@@ -31,7 +31,7 @@ describe('role guards', () => {
     auth.saveSession('token', 'Admin');
 
     expect(run(adminGuard)).toBeTrue();
-    expect(redirect(userGuard)).toBe('/inputForm');
+    expect(redirect(userGuard)).toBe('/admin/home');
   });
 
   it('lets a user into the user area only', () => {

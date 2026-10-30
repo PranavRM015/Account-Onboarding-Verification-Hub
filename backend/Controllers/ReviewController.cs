@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using TicketDtos;
+using Tickets;
 
 namespace ReviewControlNamespace
 {
@@ -43,6 +44,16 @@ namespace ReviewControlNamespace
             _logger = logger;
         }
 
+        private const string TicketBusy = "Another reviewer is working on this ticket right now. Reload it and try again.";
+
+        // Takes the ticket's row lock for the rest of the open transaction. NOWAIT: if another reviewer already holds it,
+        // this fails at once (SQL error 1222) instead of queueing, so the second reviewer is turned away rather than waiting
+        // to act on a ticket whose state the first one is changing. Call it first, then check the ticket's state.
+        private Ticket? LockTicket(int ticketId) => _db.Tickets
+            .FromSqlInterpolated($"SELECT * FROM Tickets WITH (UPDLOCK, ROWLOCK, NOWAIT) WHERE TicketId = {ticketId}")
+            .AsEnumerable()
+            .FirstOrDefault();
+
         [HttpPost("{ticketId:int}/approve")]
         public IActionResult Approve(int ticketId, [FromBody] ApproveInformation info)
         {
@@ -58,7 +69,8 @@ namespace ReviewControlNamespace
             }
             try
             {
-                var ticket = _db.Tickets.FirstOrDefault(t => t.TicketId == ticketId);
+                using var transaction = _db.Database.BeginTransaction();
+                var ticket = LockTicket(ticketId);
                 if (ticket is null)
                 {
                     return NotFound("That ticket does not exist.");
@@ -71,7 +83,6 @@ namespace ReviewControlNamespace
                 {
                     return Conflict("The ticket has not been risk rated yet.");
                 }
-                using var transaction = _db.Database.BeginTransaction();
 
                 if (_db.Flags.Any(f => f.TicketId == ticketId && f.ClearedAt == null))
                 {
@@ -107,6 +118,11 @@ namespace ReviewControlNamespace
                 _db.SaveChanges();
                 transaction.Commit();
                 return Ok(new { message = "Ticket approved", ticket.TicketId });
+            }
+            catch (SqlException ex) when (ex.Number == 1222)
+            {
+                _db.ChangeTracker.Clear();
+                return Conflict(TicketBusy);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -242,16 +258,18 @@ namespace ReviewControlNamespace
             }
             try
             {
-                var flag = _db.Flags.FirstOrDefault(f => f.FlagId == flagId && f.TicketId == ticketId);
-                if (flag is null)
+                if (!_db.Flags.Any(f => f.FlagId == flagId && f.TicketId == ticketId))
                 {
                     return NotFound("That flag does not exist on this ticket.");
                 }
-                var ticket = _db.Tickets.FirstOrDefault(t => t.TicketId == ticketId);
+                using var transaction = _db.Database.BeginTransaction();
+                var ticket = LockTicket(ticketId);
                 if (ticket is null)
                 {
                     return NotFound("That ticket does not exist.");
                 }
+                // Read the flag only now that the ticket is locked, so a clear by another reviewer is seen.
+                var flag = _db.Flags.First(f => f.FlagId == flagId && f.TicketId == ticketId);
                 if (ticket.TicketStatus != "Review")
                 {
                     return Conflict("Flags can only be cleared on tickets in Review.");
@@ -260,7 +278,6 @@ namespace ReviewControlNamespace
                 {
                     return Conflict("That flag has already been cleared.");
                 }
-                using var transaction = _db.Database.BeginTransaction();
                 flag.ClearedBy = admin.AdminId;
                 flag.ClearedAt = DateTime.UtcNow;
                 flag.ClearedReason = reason;
@@ -274,6 +291,11 @@ namespace ReviewControlNamespace
                 _db.SaveChanges();
                 transaction.Commit();
                 return Ok(new { message = "Flag cleared", ticket.TicketId, flag.FlagId });
+            }
+            catch (SqlException ex) when (ex.Number == 1222)
+            {
+                _db.ChangeTracker.Clear();
+                return Conflict(TicketBusy);
             }
             catch (Exception ex)
             {
@@ -327,7 +349,8 @@ namespace ReviewControlNamespace
             }
             try
             {
-                var ticket = _db.Tickets.FirstOrDefault(t => t.TicketId == ticketId);
+                using var transaction = _db.Database.BeginTransaction();
+                var ticket = LockTicket(ticketId);
                 if (ticket is null)
                 {
                     return NotFound("That ticket does not exist.");
@@ -336,7 +359,6 @@ namespace ReviewControlNamespace
                 {
                     return Conflict("Only tickets in Review can be rejected.");
                 }
-                using var transaction = _db.Database.BeginTransaction();
                 var decision = new Decision(ticket.TicketId, "Reject", rejecter, reason);
                 var decisionValidation = new DecisionValidator().Validate(decision);
                 if (!decisionValidation.IsValid)
@@ -350,6 +372,11 @@ namespace ReviewControlNamespace
                 _db.SaveChanges();
                 transaction.Commit();
                 return Ok(new { message = "Ticket rejected", ticket.TicketId });
+            }
+            catch (SqlException ex) when (ex.Number == 1222)
+            {
+                _db.ChangeTracker.Clear();
+                return Conflict(TicketBusy);
             }
             catch (DbUpdateConcurrencyException)
             {

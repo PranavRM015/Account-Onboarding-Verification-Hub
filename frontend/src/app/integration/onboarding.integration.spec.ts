@@ -202,6 +202,11 @@ describe('Onboarding integration with mocked HTTP', () => {
     await settle();
 
     await logIn('admin');
+    // An admin lands on the list of customers who are waiting; there are none here, so go on to the form.
+    expect(TestBed.inject(Router).url).toBe('/admin/home');
+    http.expectOne('/api/admins/pending-customers').flush([]);
+    await settle();
+    await harness.navigateByUrl('/inputForm');
     expect(TestBed.inject(Router).url).toBe('/inputForm');
   };
 
@@ -472,12 +477,70 @@ describe('Onboarding integration with mocked HTTP', () => {
 
       await harness.navigateByUrl('/user/home');
 
-      expect(TestBed.inject(Router).url).toBe('/inputForm');
+      expect(TestBed.inject(Router).url).toBe('/admin/home');
+      http.expectOne('/api/admins/pending-customers').flush([]);
     });
 
     it('sends a signed-out visitor from the user home page to the user login', async () => {
       await harness.navigateByUrl('/user/home');
       expect(TestBed.inject(Router).url).toBe('/user/login');
+    });
+  });
+
+  describe('customers who signed up on their own', () => {
+    const waiting = [
+      { customerId: 5, firstName: 'Alma', middleName: null, lastName: 'First', createdAt: '2026-10-30T09:00:00Z' },
+      { customerId: 9, firstName: 'Bryn', middleName: 'Ann', lastName: 'Second', createdAt: '2026-10-30T13:30:00Z' },
+    ];
+    const details = {
+      customerId: 5, firstName: 'Alma', middleName: null, lastName: 'First', dateOfBirth: '1979-08-03', gender: 'Female',
+      taxIdType: 'ITIN', taxIdLastFourDigits: '6789', residentialAddress: address, countryOfResidence: 'CA',
+      countryOfCitizenship: 'MX', occupation: 'Nurse', employer: 'General Hospital',
+    };
+
+    it('lands an admin on the waiting customers and opens one with everything they entered', async () => {
+      await logIn('admin');
+      expect(TestBed.inject(Router).url).toBe('/admin/home');
+      http.expectOne('/api/admins/pending-customers').flush(waiting);
+      await settle();
+
+      const links = Array.from(harness.routeNativeElement!.querySelectorAll<HTMLAnchorElement>('.pending-link'));
+      expect(links.map((l) => l.textContent)).toEqual([jasmine.stringMatching(/Alma First/), jasmine.stringMatching(/Bryn Ann Second/)]);
+      links[0].click();
+      await settle();
+      expect(TestBed.inject(Router).url).toBe('/admin/pending/5');
+      http.expectOne('/api/admins/pending-customers/5').flush(details);
+      await settle();
+
+      expect(field('#field-firstName').value).toBe('Alma');
+      expect(field('#field-dateOfBirth').value).toBe('1979-08-03');
+      expect(field('#field-taxId').value).toBe('•••••6789');
+      expect(field('#field-countryOfResidence').value).toBe('Canada');
+      expect(field('#field-occupation').value).toBe('Nurse');
+      expect(field('#typeOfAccount').value).toBe(''); // the customer never chose one
+      expect(field('#openTicketButton').hasAttribute('disabled')).toBeTrue();
+
+      enter('#typeOfAccount', 'Individual');
+      await settle();
+      await clickButton('Submit');
+      const open = http.expectOne('/api/admins/pending-customers/5/submit');
+      expect(open.request.method).toBe('POST');
+      expect(open.request.body).toEqual({ typeOfAccount: 'Individual', jointCustomerId: null });
+      open.flush({ message: 'Customer saved', customerId: 5, ticketId });
+      await settle();
+
+      expect(TestBed.inject(Router).url).toBe(`/review/${ticketId}`);
+      http.expectOne(`/api/admins/tickets/${ticketId}`).flush(ticketFor(scenarios[0], 'Review', 0));
+    });
+
+    it('keeps a signed-in user out of the waiting customers', async () => {
+      await logIn('user', customerLogin.username, customerLogin.password);
+      http.expectOne('/api/users/me').flush({ username: customerLogin.username, role: 'User' });
+
+      await harness.navigateByUrl('/admin/home');
+      expect(TestBed.inject(Router).url).toBe('/user/home');
+      await harness.navigateByUrl('/admin/pending/5');
+      expect(TestBed.inject(Router).url).toBe('/user/home');
     });
   });
 

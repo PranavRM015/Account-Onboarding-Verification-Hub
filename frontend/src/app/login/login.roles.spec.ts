@@ -57,7 +57,8 @@ describe('Login for each role', () => {
     http.expectOne('/api/admins/login').flush({ role: 'Admin', token: 't', username: 'someone', message: 'ok', expiresAt: '' });
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/inputForm');
+    expect(TestBed.inject(Router).url).toBe('/admin/home');
+    http.expectOne('/api/admins/pending-customers').flush([]);
     expect(localStorage.getItem('authRole')).toBe('Admin');
   });
 

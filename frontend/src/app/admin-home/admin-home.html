@@ -1,0 +1,31 @@
+<div class="my-box">
+    <h1 class="text" id="welcome">{{ adminName ? 'Welcome, ' + adminName + '!' : 'Welcome!' }}</h1>
+    <p>Here are the remaining customers you are responsible for onboarding.</p>
+
+    @switch (status()) {
+        @case ('loading') {
+            <p id="pendingLoading">Loading...</p>
+        }
+        @case ('failed') {
+            <p class="inline-error" id="pendingFailed">Could not load the waiting customers. Please try again.</p>
+        }
+        @default {
+            @if (customers().length === 0) {
+                <p id="pendingEmpty">No one is waiting. Everyone who signed up has been onboarded.</p>
+            } @else {
+                <ul class="pending-list" id="pendingList">
+                    @for (customer of customers(); track customer.customerId) {
+                        <li>
+                            <a class="pending-link" [routerLink]="['/admin/pending', customer.customerId]">
+                                {{ fullName(customer) }} <span class="when">signed up {{ customer.createdAt | date: 'medium' }}</span>
+                            </a>
+                        </li>
+                    }
+                </ul>
+            }
+        }
+    }
+
+    <a class="button link-button" id="newCustomerButton" routerLink="/inputForm">Enter a new customer</a>
+    <button type="button" class="button" id="logoutButton" (click)="logout()">Log out</button>
+</div>

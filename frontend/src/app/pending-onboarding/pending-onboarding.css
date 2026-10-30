@@ -1,0 +1,14 @@
+.note {
+    color: #cbd5e1;
+    text-align: center;
+}
+
+input[readonly] {
+    background-color: #e2e8f0;
+    border: 1px solid #94a3b8;
+    border-radius: 4px;
+    color: #0f172a;
+    padding: 4px 8px;
+    text-align: center;
+    width: 280px;
+}

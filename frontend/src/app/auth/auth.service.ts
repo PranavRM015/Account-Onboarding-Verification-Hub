@@ -8,6 +8,7 @@ export type Role = 'Admin' | 'User';
 export interface LoginResponse {
   message: string;
   username: string;
+  firstName?: string; // sent for admins, so the home page can greet them
   role: Role;
   token: string;
   expiresAt: string;
@@ -15,6 +16,7 @@ export interface LoginResponse {
 
 const TOKEN_KEY = 'authToken';
 const ROLE_KEY = 'authRole';
+const NAME_KEY = 'authName';
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -38,6 +40,11 @@ export class AuthService {
     return role === 'Admin' || role === 'User' ? role : null;
   }
 
+  // The first name to greet the signed-in person with, if the login gave one.
+  get name(): string | null {
+    return this.read(NAME_KEY) || null;
+  }
+
   isLoggedIn(): boolean {
     return !!this.token;
   }
@@ -47,10 +54,15 @@ export class AuthService {
     return this.isLoggedIn() && this.role === role;
   }
 
-  saveSession(token: string, role: Role): void {
+  saveSession(token: string, role: Role, name?: string): void {
     try {
       localStorage.setItem(TOKEN_KEY, token);
       localStorage.setItem(ROLE_KEY, role);
+      if (name) {
+        localStorage.setItem(NAME_KEY, name);
+      } else {
+        localStorage.removeItem(NAME_KEY);
+      }
     } catch {
       // Storage is blocked; the session cookie still signs the person in.
     }
@@ -60,6 +72,7 @@ export class AuthService {
     try {
       localStorage.removeItem(TOKEN_KEY);
       localStorage.removeItem(ROLE_KEY);
+      localStorage.removeItem(NAME_KEY);
     } catch {
       // Nothing stored, nothing to clear.
     }
