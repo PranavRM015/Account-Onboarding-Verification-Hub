@@ -1,103 +1,256 @@
-<form (ngSubmit)="acceptAdminCredentials()" novalidate>
-    <div class="my-box">
-        <div class="fields">
+<form [attr.aria-busy]="submitting()" (ngSubmit)="acceptAdminCredentials()" novalidate>
+    <div class="my-box wide-form">
+        <div class="page-heading">
             <h1>Sign up as a new admin</h1>
-            <div class="username-container">
-                <label for="Username">Username:</label>
-                <input type="text" id="Username" name="Username"
-                    placeholder="Enter your username"
-                    [formControl]="username"
-                    (focus)="showModal('username')"
-                    (blur)="hideModal()" />
+            <p>Enter your details to create an admin account.</p>
+            <p class="form-guidance">All fields are required unless marked optional.</p>
+        </div>
+        <section class="form-section">
+            <h2>Account security</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <div class="username-container">
+                        <label for="Username">Username:</label>
+                        <input
+                            [attr.aria-invalid]="username.invalid && username.touched"
+                            [attr.aria-describedby]="fieldError(username, 'Username') ? 'UsernameError' : null"
+                            type="text"
+                            id="Username"
+                            name="Username"
+                            placeholder="Enter your username"
+                            [formControl]="username"
+                            (focus)="showModal('username')"
+                            (blur)="hideModal()"
+                        />
+                        @if (fieldError(username, 'Username'); as error) {
+                            <span class="inline-error" id="UsernameError">{{ error }}</span>
+                        }
 
-                <div id="usernameModal" class="modal" [class.show]="activeModal === 'username'">
-                    <div class="modal-content">
-                        <ul class="modal-text">
-                            <li><strong>Username must be:</strong></li>
-                            <li>at least 3 characters long</li>
-                            <li>no more than 40 characters long</li>
-                        </ul>
+                        <div id="usernameModal" class="modal" [class.show]="activeModal === 'username'">
+                            <div class="modal-content">
+                                <ul class="modal-text">
+                                    <li><strong>Username must be:</strong></li>
+                                    <li>at least 3 characters long</li>
+                                    <li>no more than 40 characters long</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fields">
+                    <div class="password-container">
+                        <label for="Password">Password:</label>
+                        <input
+                            [attr.aria-invalid]="password.invalid && password.touched"
+                            [attr.aria-describedby]="fieldError(password, 'Password') ? 'PasswordError' : null"
+                            type="password"
+                            id="Password"
+                            name="Password"
+                            placeholder="Enter your password"
+                            [formControl]="password"
+                            (focus)="showModal('password')"
+                            (blur)="hideModal()"
+                        />
+                        @if (fieldError(password, 'Password'); as error) {
+                            <span class="inline-error" id="PasswordError">{{ error }}</span>
+                        }
+
+                        <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
+                            <div class="modal-content">
+                                <ul class="modal-text">
+                                    <li><strong>Password must be:</strong></li>
+                                    <li>at least 8 characters long</li>
+                                    <li>have at least one uppercase letter</li>
+                                    <li>have at least one lowercase letter</li>
+                                    <li>have at least one number</li>
+                                    <li>have at least one special character</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-            <br>
-            <div class="password-container">
-                <label for="Password">Password:</label>
-                <input type="password" id="Password" name="Password"
-                    placeholder="Enter your password"
-                    [formControl]="password"
-                    (focus)="showModal('password')"
-                    (blur)="hideModal()" />
-
-                <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
-                    <div class="modal-content">
-                        <ul class="modal-text">
-                            <li><strong>Password must be:</strong></li>
-                            <li>at least 8 characters long</li>
-                            <li>have at least one uppercase letter</li>
-                            <li>have at least one lowercase letter</li>
-                            <li>have at least one number</li>
-                            <li>have at least one special character</li>
-                        </ul>
-                    </div>
+        </section>
+        <section class="form-section">
+            <h2>Personal information</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <label for="FirstName">First name:</label>
+                    <input
+                        [attr.aria-invalid]="firstName.invalid && firstName.touched"
+                        [attr.aria-describedby]="fieldError(firstName, 'First name') ? 'FirstNameError' : null"
+                        type="text"
+                        id="FirstName"
+                        [formControl]="firstName"
+                        placeholder="Enter your first name"
+                    />
+                    @if (fieldError(firstName, 'First name'); as error) {
+                        <span class="inline-error" id="FirstNameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="MiddleName">Middle name (optional):</label>
+                    <input
+                        [attr.aria-invalid]="middleName.invalid && middleName.touched"
+                        [attr.aria-describedby]="fieldError(middleName, 'Middle name') ? 'MiddleNameError' : null"
+                        type="text"
+                        id="MiddleName"
+                        [formControl]="middleName"
+                        placeholder="Enter your middle name (optional)"
+                    />
+                    @if (fieldError(middleName, 'Middle name'); as error) {
+                        <span class="inline-error" id="MiddleNameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="LastName">Last name:</label>
+                    <input
+                        [attr.aria-invalid]="lastName.invalid && lastName.touched"
+                        [attr.aria-describedby]="fieldError(lastName, 'Last name') ? 'LastNameError' : null"
+                        type="text"
+                        id="LastName"
+                        [formControl]="lastName"
+                        placeholder="Enter your last name"
+                    />
+                    @if (fieldError(lastName, 'Last name'); as error) {
+                        <span class="inline-error" id="LastNameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="DateOfBirth">Date of birth:</label>
+                    <input
+                        [attr.aria-invalid]="dateOfBirth.invalid && dateOfBirth.touched"
+                        [attr.aria-describedby]="fieldError(dateOfBirth, 'Date of birth') ? 'DateOfBirthError' : null"
+                        type="date"
+                        id="DateOfBirth"
+                        [formControl]="dateOfBirth"
+                        [max]="maxBirthDate"
+                    />
+                    @if (fieldError(dateOfBirth, 'Date of birth'); as error) {
+                        <span class="inline-error" id="DateOfBirthError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="Gender">Gender:</label>
+                    <select
+                        [attr.aria-invalid]="gender.invalid && gender.touched"
+                        [attr.aria-describedby]="fieldError(gender, 'Gender') ? 'GenderError' : null"
+                        id="Gender"
+                        [formControl]="gender"
+                    >
+                        <option value="" disabled>Select your gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                    </select>
+                    @if (fieldError(gender, 'Gender'); as error) {
+                        <span class="inline-error" id="GenderError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="Ssn">SSN:</label>
+                    <input
+                        [attr.aria-invalid]="ssn.invalid && ssn.touched"
+                        [attr.aria-describedby]="fieldError(ssn, 'SSN') ? 'SsnError' : null"
+                        type="password"
+                        id="Ssn"
+                        [formControl]="ssn"
+                        placeholder="9 digits"
+                        autocomplete="off"
+                    />
+                    @if (fieldError(ssn, 'SSN'); as error) {
+                        <span class="inline-error" id="SsnError">{{ error }}</span>
+                    }
                 </div>
             </div>
-            <br>
-            <label for="FirstName">First name:</label>
-            <input type="text" id="FirstName" [formControl]="firstName" placeholder="Enter your first name" />
-            <br>
-            <label for="MiddleName">Middle name:</label>
-            <input type="text" id="MiddleName" [formControl]="middleName" placeholder="Enter your middle name (optional)" />
-            <br>
-            <label for="LastName">Last name:</label>
-            <input type="text" id="LastName" [formControl]="lastName" placeholder="Enter your last name" />
-            <br>
-            <label for="DateOfBirth">Date of birth:</label>
-            <input type="date" id="DateOfBirth" [formControl]="dateOfBirth" [max]="maxBirthDate" />
-            @if (dateOfBirth.errors?.['underage'] && dateOfBirth.touched) {
-            <span class="inline-error">You must be at least 18 years old.</span>
+        </section>
+        <section class="form-section">
+            <h2>Citizenship</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <label for="IsCitizen">
+                        <input type="checkbox" id="IsCitizen" [formControl]="isCitizen" />
+                        I am a citizen (optional)
+                    </label>
+                </div>
+                <div class="fields">
+                    <label for="CountryOfCitizenship">Country of citizenship:</label>
+                    <select
+                        [attr.aria-invalid]="countryOfCitizenship.invalid && countryOfCitizenship.touched"
+                        [attr.aria-describedby]="
+                            fieldError(countryOfCitizenship, 'Country of citizenship')
+                                ? 'CountryOfCitizenshipError'
+                                : null
+                        "
+                        id="CountryOfCitizenship"
+                        [formControl]="countryOfCitizenship"
+                    >
+                        <option value="" disabled>Select your country of citizenship</option>
+                        @for (c of countries; track c.code) {
+                            <option [value]="c.code">{{ c.name }}</option>
+                        }
+                    </select>
+                    @if (fieldError(countryOfCitizenship, 'Country of citizenship'); as error) {
+                        <span class="inline-error" id="CountryOfCitizenshipError">{{ error }}</span>
+                    }
+                </div>
+            </div>
+        </section>
+        <section class="form-section">
+            <h2>Password recovery</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <label for="RecoveryQuestion">Password recovery question:</label>
+                    <select
+                        [attr.aria-invalid]="passwordRecoveryQuestion.invalid && passwordRecoveryQuestion.touched"
+                        [attr.aria-describedby]="
+                            fieldError(passwordRecoveryQuestion, 'Recovery question') ? 'RecoveryQuestionError' : null
+                        "
+                        id="RecoveryQuestion"
+                        [formControl]="passwordRecoveryQuestion"
+                    >
+                        <option value="" disabled>Select a question</option>
+                        @for (q of questions; track q) {
+                            <option [value]="q">{{ q }}</option>
+                        }
+                    </select>
+                    @if (fieldError(passwordRecoveryQuestion, 'Recovery question'); as error) {
+                        <span class="inline-error" id="RecoveryQuestionError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="RecoveryAnswer">Your answer:</label>
+                    <input
+                        [attr.aria-invalid]="passwordRecoveryAnswer.invalid && passwordRecoveryAnswer.touched"
+                        [attr.aria-describedby]="
+                            fieldError(passwordRecoveryAnswer, 'Recovery answer') ? 'RecoveryAnswerError' : null
+                        "
+                        type="text"
+                        id="RecoveryAnswer"
+                        [formControl]="passwordRecoveryAnswer"
+                        placeholder="Enter your answer"
+                        autocomplete="off"
+                    />
+                    @if (fieldError(passwordRecoveryAnswer, 'Recovery answer'); as error) {
+                        <span class="inline-error" id="RecoveryAnswerError">{{ error }}</span>
+                    }
+                </div>
+            </div>
+        </section>
+        <div class="form-footer">
+            @if (message()) {
+                <p class="inline-error" role="alert">{{ message() }}</p>
             }
-            <br>
-            <label for="Gender">Gender:</label>
-            <select id="Gender" [formControl]="gender">
-                <option value="" disabled>Select your gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-            </select>
-            <br>
-            <label for="Ssn">SSN:</label>
-            <input type="password" id="Ssn" [formControl]="ssn" placeholder="9 digits" autocomplete="off" />
-            @if (ssn.errors?.['taxIdFormat'] && ssn.touched) {
-            <span class="inline-error">Enter exactly 9 digits (dashes allowed).</span>
-            }
-            <br>
-            <label for="IsCitizen">
-                <input type="checkbox" id="IsCitizen" [formControl]="isCitizen" /> I am a citizen
-            </label>
-            <br>
-            <label for="CountryOfCitizenship">Country of citizenship:</label>
-            <select id="CountryOfCitizenship" [formControl]="countryOfCitizenship">
-                <option value="" disabled>Select your country of citizenship</option>
-                @for (c of countries; track c.code) {
-                <option [value]="c.code">{{ c.name }}</option>
-                }
-            </select>
-            <br>
-            <label for="RecoveryQuestion">Password recovery question:</label>
-            <select id="RecoveryQuestion" [formControl]="passwordRecoveryQuestion">
-                <option value="" disabled>Select a question</option>
-                @for (q of questions; track q) {
-                <option [value]="q">{{ q }}</option>
-                }
-            </select>
-            <br>
-            <label for="RecoveryAnswer">Your answer:</label>
-            <input type="text" id="RecoveryAnswer" [formControl]="passwordRecoveryAnswer" placeholder="Enter your answer" autocomplete="off" />
-            <br>
-            <button type="submit" class="button">Sign up</button>
-            <a class="link" routerLink="/admin/login">Already have an account? Log in</a>
-            <a class="link" routerLink="/">Back to home</a>
+            <button type="submit" class="button" [disabled]="submitting()">
+                {{ submitting() ? 'Creating account...' : 'Sign up' }}
+            </button>
+            <div class="account-navigation">
+                <a class="link secondary-link" routerLink="/admin/login">Already have an account? Log in</a>
+                <a class="link back-link" routerLink="/">
+                    <span aria-hidden="true">←</span>
+                    Back to home
+                </a>
+            </div>
         </div>
     </div>
 </form>

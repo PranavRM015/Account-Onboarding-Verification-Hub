@@ -8,16 +8,36 @@ html, body {
 input, select, textarea {
   font-family: inherit;
 }
+* {
+  box-sizing: border-box;
+}
+h1 {
+  font-size: 28px;
+  line-height: 1.3;
+  margin: 0 0 12px;
+}
+h2 {
+  font-size: 20px;
+  line-height: 1.4;
+  margin: 0 0 16px;
+}
+p {
+  line-height: 1.6;
+}
 .fields {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   font-size: 16px;
-  text-align: center;
+  text-align: left;
+  min-width: 0;
+  width: 100%;
+  gap: 8px;
 }
 .choices{
   width: 100%;
-  gap: 100px;
+  gap: 24px;
+  flex-wrap: wrap;
   display: flex;
   justify-content: center;
   align-items: flex-start;
@@ -33,19 +53,113 @@ input, select, textarea {
   white-space: nowrap;
 }
 .my-box{
-  width: 400px;
-  min-height: 300px;
+  width: min(480px, calc(100% - 32px));
   height: auto;
   background-color: #000000;
-  border: 2px solid #ffffff;
+  border: 1px solid #ffffff;
   border-radius: 8px;
-  padding: 20px;
-  margin: 15px;
-  align-items: center;
+  padding: 24px;
+  margin: 32px auto;
+  align-items: stretch;
   display: flex;
   flex-direction: column;
   margin-left: auto;
   margin-right: auto;
+}
+.my-box form {
+  width: 100%;
+}
+.my-box input:not([type=checkbox]):not([type=radio]),
+.my-box select,
+.my-box textarea,
+.modal-content textarea {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #ffffff;
+  border-radius: 4px;
+  font-size: 16px;
+  min-height: 44px;
+  padding: 11px 12px;
+  width: 100%;
+}
+.my-box label {
+  display: block;
+  line-height: 1.5;
+}
+.my-box label:has(input[type=checkbox]) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+}
+.my-box .username-container,
+.my-box .password-container,
+.my-box .address-container,
+.my-box .joint-container,
+.my-box .taxid-container {
+  width: 100%;
+}
+.my-box .username-container > label,
+.my-box .password-container > label,
+.my-box .address-container > label,
+.my-box .joint-container > label,
+.my-box .taxid-container > label {
+  margin-bottom: 8px;
+}
+.wide-form {
+  width: min(820px, calc(100% - 32px));
+}
+.page-heading {
+  margin-bottom: 24px;
+}
+.page-heading p {
+  margin: 0;
+}
+.page-heading .form-guidance {
+  margin-top: 12px;
+}
+.form-section + .form-section {
+  border-top: 1px solid #ffffff;
+  padding-top: 24px;
+  margin-top: 24px;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+.full-width {
+  grid-column: 1 / -1;
+}
+.form-footer {
+  margin-top: 28px;
+  text-align: right;
+}
+.form-footer .button {
+  margin: 0 0 12px;
+}
+.form-footer .link {
+  margin-top: 12px;
+}
+.gender-options {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  min-height: 44px;
+}
+.gender-options legend {
+  margin-bottom: 12px;
+  padding: 0;
+}
+.gender-options input {
+  margin: 0;
+}
+.gender-options label {
+  margin-right: 12px;
 }
 .text{
   font-family: Arial, sans-serif;
@@ -61,6 +175,8 @@ input, select, textarea {
   left: 0;
   z-index: 1000;
   min-width: 240px;
+  width: 100%;
+  max-width: 100%;
   text-align: left;
 }
 .modal.show {
@@ -93,16 +209,47 @@ input, select, textarea {
 
 .button {
   background-color: #1d4ed8;
-  border: 0;
+  border: 1px solid #1d4ed8;
   border-radius: 4px;
   color: #ffffff;
   cursor: pointer;
   font-size: 16px;
-  margin: 20px 20px 10px;
-  padding: 8px 20px;
+  margin: 16px 0 8px;
+  padding: 12px 20px;
+  min-height: 44px;
+  font-family: inherit;
+  line-height: 1.25;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+.button.secondary {
+  background-color: #000000;
+  border: 1px solid #ffffff;
+}
+.link-button {
+  background: none;
+  border: 0;
+  color: #93c5fd;
+  cursor: pointer;
+  font: inherit;
+  padding: 8px 0;
+  text-align: left;
+  text-decoration: underline;
+}
+button:focus-visible, a:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
 }
 .button:hover {
   background-color: #1e40af;
+}
+.button.secondary:hover {
+  background-color: #000000;
+  border-color: #93c5fd;
+  color: #93c5fd;
 }
 .button:disabled {
   background-color: #475569;
@@ -116,8 +263,117 @@ input, select, textarea {
   margin-top: 8px;
 }
 
+.link.secondary-link, .link-button.secondary-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  margin: 0;
+  border: 1px solid #93c5fd;
+  border-radius: 4px;
+  background-color: #000000;
+  color: #93c5fd;
+  font: 14px Arial, sans-serif;
+  line-height: 1.5;
+  text-align: center;
+  text-decoration: none;
+}
+
+.link.secondary-link:hover, .link-button.secondary-link:hover {
+  background-color: #1d4ed8;
+  border-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.link.back-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: 4px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+
+.link.back-link:hover {
+  background-color: #1d4ed8;
+  color: #ffffff;
+}
+
+.account-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  width: 100%;
+}
+
+.account-navigation {
+  border-top: 1px solid #555555;
+  margin-top: 16px;
+  padding-top: 16px;
+  text-align: center;
+}
+
+.secondary-link:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
 .inline-error {
   color: #fca5a5;
   font-size: 14px;
   margin: 8px 0 0;
+}
+
+.inline-notice {
+  color: #93c5fd;
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.form-guidance {
+  color: #93c5fd;
+  font-size: 14px;
+  margin-top: 12px;
+}
+
+.my-box input[aria-invalid=true],
+.my-box select[aria-invalid=true],
+.my-box textarea[aria-invalid=true] {
+  border: 2px solid #1d4ed8;
+}
+
+.gender-options[aria-invalid=true] {
+  border-left: 2px solid #1d4ed8;
+  padding-left: 12px;
+}
+
+.form-footer .inline-error {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+@media (max-width: 600px) {
+  .account-links {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .form-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .my-box {
+    margin-top: 24px;
+    padding: 20px;
+  }
+  .form-footer {
+    text-align: left;
+  }
+  .form-footer .button {
+    width: 100%;
+  }
+  .modal {
+    min-width: 0;
+  }
 }

@@ -1,0 +1,17 @@
+.app-header {
+    border-bottom: 1px solid #ffffff;
+    padding: 22px 28px;
+    font-weight: bold;
+}
+
+.app-header span {
+    display: block;
+    max-width: 992px;
+    margin: 0 auto;
+}
+
+@media (max-width: 600px) {
+    .app-header {
+        padding: 20px 16px;
+    }
+}

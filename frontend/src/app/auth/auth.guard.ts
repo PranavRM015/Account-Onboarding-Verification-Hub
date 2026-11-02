@@ -14,4 +14,4 @@ const requireRole = (role: Role, login: string, otherHome: string): CanActivateF
 };
 
 export const adminGuard = requireRole('Admin', '/admin/login', '/user/home');
-export const userGuard = requireRole('User', '/user/login', '/inputForm');
+export const userGuard = requireRole('User', '/user/login', '/admin/home');

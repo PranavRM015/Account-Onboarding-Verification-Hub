@@ -200,9 +200,12 @@ describe('Onboarding integration with mocked HTTP', () => {
     expect(signup.request.body).toEqual({ username: credentials.username, password: credentials.password, ...adminProfile });
     signup.flush('created');
     await settle();
+    expect(text()).toContain('Account created. Please log in with your new credentials.');
 
     await logIn('admin');
-    expect(TestBed.inject(Router).url).toBe('/inputForm');
+    expect(TestBed.inject(Router).url).toBe('/admin/home');
+    http.expectOne('/api/admins/tickets').flush([]);
+    await harness.navigateByUrl('/inputForm');
   };
 
   const fillAndSubmitForm = async (s: Scenario) => {
@@ -273,6 +276,30 @@ describe('Onboarding integration with mocked HTTP', () => {
 
   afterEach(() => http.verify());
 
+  it('keeps the review reason after a failed save and blocks duplicate confirmations', async () => {
+    await signUpAndLogIn();
+    await fillAndSubmitForm(scenarios[0]);
+    await clickButton('Reject', '.actions');
+    enter('#reason', 'Documents could not be verified.');
+    await settle();
+    await clickButton('Confirm', '#reasonModal');
+    const modal = harness.routeNativeElement!.querySelector('#reasonModal')!;
+    const confirm = modal.querySelectorAll<HTMLButtonElement>('button')[1];
+    expect(confirm.disabled).toBeTrue();
+    expect(confirm.textContent).toContain('Saving...');
+    expect(modal.querySelector<HTMLTextAreaElement>('textarea')!.readOnly).toBeTrue();
+    confirm.click();
+
+    http.expectOne(`/api/admins/tickets/${ticketId}/reject`)
+      .flush('Could not save. Try again.', { status: 503, statusText: 'Unavailable' });
+    await settle();
+    expect(modal.classList.contains('show')).toBeTrue();
+    expect(field('#reason').value).toBe('Documents could not be verified.');
+    expect(modal.querySelector('[role=alert]')!.textContent).toContain('Could not save. Try again.');
+    expect(confirm.disabled).toBeFalse();
+    expect(window.alert).not.toHaveBeenCalled();
+  });
+
   for (const scenario of scenarios) {
     describe(scenario.name, () => {
       it('shows the flags and the risk rating on the review page', async () => {
@@ -280,6 +307,9 @@ describe('Onboarding integration with mocked HTTP', () => {
         await fillAndSubmitForm(scenario);
 
         expect(text()).toContain(scenario.rating);
+        const summary = harness.routeNativeElement!.querySelector('.ticket-summary')!;
+        expect(summary.textContent).toContain('Under review');
+        expect(summary.textContent).toContain(`${scenario.flags.length} remaining`);
         for (const flag of scenario.flags) {
           expect(text()).toContain(flagLabel(flag));
         }
@@ -305,6 +335,8 @@ describe('Onboarding integration with mocked HTTP', () => {
           http.expectOne(`/api/admins/tickets/${ticketId}`).flush(ticketFor(scenario, 'Review', i + 1));
           await settle();
           expect(text()).toContain('Flag cleared');
+          expect(harness.routeNativeElement!.querySelector('.ticket-summary')!.textContent)
+            .toContain(`${scenario.flags.length - i - 1} remaining`);
         }
 
         const approveUrl = `/api/admins/tickets/${ticketId}/approve`;
@@ -382,7 +414,8 @@ describe('Onboarding integration with mocked HTTP', () => {
       await clickButton('Sign up');
       http.expectOne('/api/admins/signup').flush('taken', { status: 409, statusText: 'Conflict' });
       await settle();
-      expect(window.alert).toHaveBeenCalledWith('taken');
+      expect(text()).toContain('taken');
+      expect(window.alert).not.toHaveBeenCalled();
     });
 
     it('tells the admin to wait after too many login attempts', async () => {
@@ -392,7 +425,8 @@ describe('Onboarding integration with mocked HTTP', () => {
       await clickButton('Log in');
       http.expectOne('/api/admins/login').flush('slow down', { status: 429, statusText: 'Too Many Requests' });
       await settle();
-      expect(window.alert).toHaveBeenCalledWith('Too many attempts. Please wait a minute and try again.');
+      expect(text()).toContain('Too many attempts. Please wait a minute and try again.');
+      expect(window.alert).not.toHaveBeenCalled();
       expect(TestBed.inject(Router).url).toBe('/admin/login');
     });
 
@@ -403,7 +437,8 @@ describe('Onboarding integration with mocked HTTP', () => {
       await clickButton('Log in');
       http.expectOne('/api/admins/login').flush('no', { status: 401, statusText: 'Unauthorized' });
       await settle();
-      expect(window.alert).toHaveBeenCalledWith('Invalid username or password.');
+      expect(text()).toContain('Invalid username or password.');
+      expect(window.alert).not.toHaveBeenCalled();
       expect(TestBed.inject(Router).url).toBe('/admin/login');
     });
 
@@ -417,7 +452,8 @@ describe('Onboarding integration with mocked HTTP', () => {
         { status: 423, statusText: 'Locked' },
       );
       await settle();
-      expect(window.alert).toHaveBeenCalledWith('Too many failed attempts. This account is locked for 15 more minutes.');
+      expect(text()).toContain('Too many failed attempts. This account is locked for 15 more minutes.');
+      expect(window.alert).not.toHaveBeenCalled();
       expect(TestBed.inject(Router).url).toBe('/admin/login');
       expect(localStorage.getItem('authToken')).toBeNull();
     });
@@ -472,7 +508,8 @@ describe('Onboarding integration with mocked HTTP', () => {
 
       await harness.navigateByUrl('/user/home');
 
-      expect(TestBed.inject(Router).url).toBe('/inputForm');
+      expect(TestBed.inject(Router).url).toBe('/admin/home');
+      http.expectOne('/api/admins/tickets').flush([]);
     });
 
     it('sends a signed-out visitor from the user home page to the user login', async () => {

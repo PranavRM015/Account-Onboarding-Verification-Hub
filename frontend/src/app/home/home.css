@@ -1,26 +1,54 @@
 .home {
-    padding: 30px 16px;
+    padding: 36px 16px;
     text-align: center;
 }
 
 .cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 32px;
+    gap: 24px;
     justify-content: center;
-    margin-top: 24px;
+    margin: 32px auto 0;
+    max-width: 660px;
 }
 
 .card {
+    box-sizing: border-box;
+    max-width: 100%;
     background-color: #ffffff;
-    border-radius: 10px;
-    box-shadow: 0 6px 18px rgba(29, 78, 216, 0.35);
+    border-radius: 8px;
     color: #1d4ed8;
     display: flex;
     flex-direction: column;
     gap: 12px;
-    padding: 24px 32px;
-    width: 260px;
+    padding: 24px;
+    flex: 1 1 280px;
+}
+
+.home h1 {
+    max-width: 680px;
+    margin: 0 auto 12px;
+}
+
+.home > p {
+    margin: 0 auto 24px;
+}
+
+.card p {
+    flex: 1;
+}
+
+.card[aria-label="Account access"] {
+    flex: 0 1 400px;
+}
+
+.back-link {
+    margin-top: 24px;
+}
+
+.card-button:focus-visible {
+    outline: 3px solid #93c5fd;
+    outline-offset: 4px;
 }
 
 .card h2,
@@ -30,10 +58,11 @@
 
 .card-button {
     background-color: #1d4ed8;
-    border: 2px solid #1d4ed8;
-    border-radius: 6px;
+    border: 1px solid #1d4ed8;
+    border-radius: 4px;
     color: #ffffff;
-    padding: 10px 12px;
+    padding: 12px 20px;
+    min-height: 44px;
     text-decoration: none;
 }
 

@@ -1,13 +1,14 @@
+import { AdminNavigation } from '../shared/admin-navigation';
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { AuthService } from '../auth/auth.service';
 import { TicketDetails, flagLabel, riskCodeLabel, riskCodeList } from '../ticket/ticketDetails';
 
 @Component({
-  imports: [DatePipe, RouterLink],
+  imports: [AdminNavigation, DatePipe, RouterLink],
   selector: 'app-result',
   styleUrl: './result.css',
   templateUrl: './result.html',
@@ -17,10 +18,10 @@ export class Result implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
-  private auth = inject(AuthService);
 
   readonly ticket = signal<TicketDetails | null>(null);
   readonly errorMessage = signal('');
+  readonly loading = signal(false);
 
   readonly flagLabel = flagLabel;
   readonly riskCodeLabel = riskCodeLabel;
@@ -30,10 +31,6 @@ export class Result implements OnInit {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       this.load(Number(params.get('ticketId')));
     });
-  }
-
-  logout(): void {
-    this.auth.logout().subscribe();
   }
 
   customerName(ticket: TicketDetails): string {
@@ -55,7 +52,8 @@ export class Result implements OnInit {
       return;
     }
     this.errorMessage.set('');
-    this.http.get<TicketDetails>(`/api/admins/tickets/${ticketId}`).subscribe({
+    this.loading.set(true);
+    this.http.get<TicketDetails>(`/api/admins/tickets/${ticketId}`).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (ticket) => this.ticket.set(ticket),
       error: (error) => this.handleError(error),
     });
@@ -64,8 +62,7 @@ export class Result implements OnInit {
   private handleError(error: HttpErrorResponse): void {
     console.error('Result request failed:', error);
     if (error.status === 401) {
-      alert('Your session has expired. Please log in again.');
-      this.router.navigate(['/admin/login']);
+      this.router.navigate(['/admin/login'], { state: { errorMessage: 'Your session has expired. Please log in again.' } });
       return;
     }
     const detail = typeof error.error === 'string' ? error.error : error.error?.title;

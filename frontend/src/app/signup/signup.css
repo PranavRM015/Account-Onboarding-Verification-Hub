@@ -1,13 +1,5 @@
-.my-box {
-    width: 520px;
-}
-
 .username-container,
 .password-container {
     position: relative;
     display: inline-block;
-}
-
-label {
-    margin-top: 10px;
 }

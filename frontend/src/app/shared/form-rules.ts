@@ -1,4 +1,4 @@
-import { FormControl, ValidatorFn, Validators } from '@angular/forms';
+import { AbstractControl, FormControl, ValidatorFn, Validators } from '@angular/forms';
 
 // The questions offered at signup. The server only accepts one of these exact strings.
 export const recoveryQuestions = [
@@ -47,3 +47,28 @@ export const passwordControl = () =>
 // The text of a failed request's body, when the server sent one (it sends plain sentences for 4xx errors).
 export const serverMessage = (error: { error?: unknown }, fallback: string): string =>
   typeof error.error === 'string' && error.error.length > 0 && error.error.length < 300 ? error.error : fallback;
+
+// Network failures and unavailable gateways should not look like invalid form details.
+export const connectionErrorMessage = (error: { status: number }): string | null =>
+  [0, 502, 503, 504].includes(error.status)
+    ? 'Unable to connect to the server. Please try again shortly.'
+    : null;
+
+// Keep field feedback consistent with the validators already attached to each form control.
+export function fieldError(control: AbstractControl, label: string): string {
+  if (!control.touched || !control.errors) { return ''; }
+  if (control.hasError('required')) { return `${label} is required.`; }
+  if (control.hasError('underage')) { return 'You must be at least 18 years old.'; }
+  if (control.hasError('taxIdFormat')) { return 'Enter exactly 9 digits (dashes allowed).'; }
+  if (control.hasError('maxlength')) { return `Use no more than ${control.errors['maxlength'].requiredLength} characters.`; }
+  if (control.hasError('minlength')) { return `Use at least ${control.errors['minlength'].requiredLength} characters.`; }
+  if (label === 'Password' && control.hasError('pattern')) {
+    return 'Include an uppercase letter, a lowercase letter, a number and a special character.';
+  }
+  if (label === 'Residential address' && control.hasError('pattern')) {
+    return 'Use the format: number street name, City, State/Province, ZIP code.';
+  }
+  if (label === 'Joint customer ID') { return 'Enter a positive whole-number customer ID.'; }
+  if (label === 'Recovery answer') { return 'Enter an answer containing more than spaces.'; }
+  return `Enter a valid ${label.toLowerCase()}.`;
+}

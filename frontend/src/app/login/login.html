@@ -1,14 +1,22 @@
-<form (ngSubmit)="acceptCredentials()" novalidate>
+<form [attr.aria-busy]="submitting()" (ngSubmit)="acceptCredentials()" novalidate>
     <div class="my-box">
         <div class="fields">
             <h1 class="text">Log in as {{ audience }}</h1>
+            <p>Enter your credentials to continue.</p>
+            @if (notice) {
+                <p class="inline-notice" role="status">{{ notice }}</p>
+            }
             <div class="username-container">
                 <label for="Username">Username:</label>
-                <input type="text" id="Username" name="Username"
+                <input
+                    type="text"
+                    id="Username"
+                    name="Username"
                     placeholder="Enter your username"
                     [formControl]="username"
                     (focus)="showModal('username')"
-                    (blur)="hideModal()" />
+                    (blur)="hideModal()"
+                />
 
                 <div id="usernameModal" class="modal" [class.show]="activeModal === 'username'">
                     <div class="modal-content">
@@ -20,14 +28,17 @@
                     </div>
                 </div>
             </div>
-            <br>
             <div class="password-container">
                 <label for="Password" class="text">Password:</label>
-                <input type="password" id="Password" name="Password"
+                <input
+                    type="password"
+                    id="Password"
+                    name="Password"
                     placeholder="Enter your password"
                     [formControl]="password"
                     (focus)="showModal('password')"
-                    (blur)="hideModal()" />
+                    (blur)="hideModal()"
+                />
 
                 <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
                     <div class="modal-content">
@@ -42,10 +53,24 @@
                     </div>
                 </div>
             </div>
-            <br>
-            <button type="submit" class="button">Log in</button>
-            <a class="link" id="forgotPassword" [routerLink]="['/forgot-password', role]">Forgot my password</a>
-            <a class="link" routerLink="/">Back to home</a>
+            @if (message()) {
+                <p class="inline-error" role="alert">{{ message() }}</p>
+            }
+            <button type="submit" class="button" [disabled]="submitting()">
+                {{ submitting() ? 'Signing in...' : 'Log in' }}
+            </button>
+            <div class="account-links">
+                <a class="link secondary-link" id="forgotPassword" [routerLink]="['/forgot-password', role]">
+                    Forgot my password
+                </a>
+                <a class="link secondary-link" [routerLink]="['/', role, 'signup']">Create an account</a>
+            </div>
+            <div class="account-navigation">
+                <a class="link back-link" [routerLink]="['/', role]">
+                    <span aria-hidden="true">←</span>
+                    Back to {{ role }} access
+                </a>
+            </div>
         </div>
     </div>
 </form>

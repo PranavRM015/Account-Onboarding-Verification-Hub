@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet, Routes } from '@angular/router';
 import { Home } from './home/home';
+import { AdminHome } from './admin-home/admin-home';
 import { Signup } from './signup/signup';
 import { Login } from './login/login';
 import { Submit } from './submit/submit';
@@ -14,8 +15,11 @@ import { adminGuard, userGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: Home },
+  { path: 'admin', component: Home, data: { role: 'admin' } },
+  { path: 'user', component: Home, data: { role: 'user' } },
   { path: 'admin/signup', component: Signup },
   { path: 'admin/login', component: Login, data: { role: 'admin' } },
+  { path: 'admin/home', component: AdminHome, canActivate: [adminGuard] },
   { path: 'user/signup', component: UserSignup },
   { path: 'user/login', component: Login, data: { role: 'user' } },
   { path: 'user/home', component: UserHome, canActivate: [userGuard] },

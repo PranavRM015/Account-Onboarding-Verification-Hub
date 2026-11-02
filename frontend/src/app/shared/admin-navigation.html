@@ -1,0 +1,9 @@
+<nav class="admin-navigation" aria-label="Admin navigation">
+    <div class="navigation-links">
+        <a routerLink="/admin/home" [attr.aria-current]="active === 'tickets' ? 'page' : null">Tickets</a>
+        <a routerLink="/inputForm" [attr.aria-current]="active === 'customer' ? 'page' : null">New customer</a>
+        <button type="button" (click)="logout()" [disabled]="loggingOut()">
+            {{ loggingOut() ? 'Logging out...' : 'Log out' }}
+        </button>
+    </div>
+</nav>

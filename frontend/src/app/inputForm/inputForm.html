@@ -1,198 +1,422 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account Verification Onboarding Hub</title>
-
-</head>
-<body>
-    <form [formGroup]="userForm" (ngSubmit)="onSubmit()">
-        <div class="my-box">
-            <h1>Please enter information for the incoming customer</h1>
-            <h2>Customer login details</h2>
-            <div class="fields">
-            <label for="CustomerUsername">Username:</label>
-            <input type="text" id="CustomerUsername" name="username" formControlName="username" placeholder="Choose a username for the customer" autocomplete="off" required>
-            </div>
-            <br>
-            <div class="fields">
-            <div class="password-container">
-            <label for="CustomerPassword">Password:</label>
-            <input type="password" id="CustomerPassword" name="password" formControlName="password" placeholder="Choose a password for the customer" autocomplete="new-password"
-            (focus)="showModal('password')"
-            (blur)="hideModal()" required>
-            <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
-            <div class="modal-content">
-                <ul class="modal-text">
-                    <li><strong>Password must be:</strong></li>
-                    <li>at least 8 characters long</li>
-                    <li>have at least one uppercase letter</li>
-                    <li>have at least one lowercase letter</li>
-                    <li>have at least one number</li>
-                    <li>have at least one special character</li>
-                </ul>
-            </div>
-            </div>
-            </div>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="recoveryQuestion">Password recovery question:</label>
-            <select id="recoveryQuestion" name="passwordRecoveryQuestion" formControlName="passwordRecoveryQuestion" required>
-                <option value="" disabled>Select a question</option>
-                @for (q of questions; track q) {
-                <option [value]="q">{{ q }}</option>
-                }
-            </select>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="recoveryAnswer">Answer:</label>
-            <input type="text" id="recoveryAnswer" name="passwordRecoveryAnswer" formControlName="passwordRecoveryAnswer" placeholder="Enter the customer's answer" autocomplete="off" required>
-            </div>
-            <br>
-            <h2>Customer details</h2>
-            <div class="fields">
-            <label for="First Name">First Name:</label>
-            <input type="text" id="FirstName" name="FirstName" formControlName="FirstName" placeholder="Enter your first name" required>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="Middle Name">Middle Name:</label>
-            <input type="text" id="MiddleName" name="MiddleName" formControlName="MiddleName" placeholder="Enter your middle name">
-            </div>
-            <br>
-            <div class="fields">
-            <label for="Last Name">Last Name:</label>
-            <input type="text" id="LastName" name="LastName" formControlName="LastName" placeholder="Enter your last name" required>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="DateOfBirth">Date of Birth:</label>
-            <input type="date" id="DateOfBirth" name="DateOfBirth" formControlName="DateOfBirth" [max]="maxBirthDate" required>
-            @if (dateOfBirth.errors?.['underage'] && dateOfBirth.touched) {
-            <span class="error">Customer must be at least 18 years old.</span>
-            }
-            </div>
-            <br>
-            <div class="fields">
-            <label for="Gender">Gender:</label>
-            <input type="radio" id="male" name="Gender" formControlName="Gender" value="Male" required>
-            <label for="male">Male</label>
-            <input type="radio" id="female" name="Gender" formControlName="Gender" value="Female" required>
-            <label for="female">Female</label>
-            <input type="radio" id="other" name="Gender" formControlName="Gender" value="Other" required>
-            <label for="other">Other</label>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="taxIdType">Tax ID Type:</label>
-            <select id="taxIdType" name="taxIdType" formControlName="taxIdType" required>
-                <option value="" disabled>Select your tax ID type</option>
-                <option value="SSN">SSN (Social Security Number)</option>
-                <option value="ITIN">ITIN (Individual Taxpayer Identification Number)</option>
-                <option value="EIN">EIN (Employer Identification Number)</option>
-            </select>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="typeOfAccount">Individual/Joint?</label>
-            <select id="typeOfAccount" name="accountType" formControlName="typeOfAccount" required>
-                <option value="" disabled>Select your account type</option>
-                <option value="Individual">Individual</option>
-                <option value="Joint">Joint</option>
-            </select>
-            </div>
-            <br>
-            @if (typeOfAccount.value === 'Joint') {
-            <div class="fields">
-            <div class="joint-container">
-            <label for="jointCustomerId">Joint Customer ID:</label>
-            <input type="number" id="jointCustomerId" name="jointCustomerId" formControlName="jointCustomerId"
-            placeholder="Enter the second holder's customer ID" min="1" step="1"
-            (focus)="hideModal()" />
-            <br>
-            <div id="jointCustomerModal" class="modal" [class.show]="activeModal === 'jointCustomer'">
-            <div class="modal-content">
-                <ul class="modal-text">
-                    <li><strong>This customer doesn't exist.</strong></li>
-                    <li>Check the ID, or submit the second holder's own form first to get one.</li>
-                </ul>
-            </div>
-            </div>
-            </div>
-            </div>
-            }
-            <br>
-            <div class="fields">
-            <div class="taxid-container">
-            <label for="taxIdNumber">Tax ID Number:</label>
-            <input [type]="showTaxId ? 'text' : 'password'" id="taxIdNumber" name="taxIdNumber" formControlName="taxIdNumber" placeholder="Enter your tax ID number" autocomplete="off" required>
-            <button type="button" (click)="toggleTaxId()">{{ showTaxId ? 'Hide' : 'Show' }}</button>
-            @if (taxIdNumber.errors?.['taxIdFormat'] && taxIdNumber.touched) {
-            <span class="error">Enter exactly 9 digits (dashes allowed).</span>
-            }
-            </div>
-            </div>
-            <br>
-            <div class="fields">
-            <div class="address-container">
-            <label for="residentialAddress">Residential Address:</label>
-            <input type="text" id="residentialAddress" name="residentialAddress" formControlName="residentialAddress"
-            placeholder="1633 Main Street, Springfield, IL, 62701"
-            (focus)="showModal('address')"
-            (blur)="hideModal()" required>
-            <br>
-            <div id="addressModal" class="modal" [class.show]="activeModal === 'address'">
-            <div class="modal-content">
-                <ul class="modal-text">
-                    <li><strong>Address format:</strong></li>
-                    <li>number street name, City, State/Province, ZIP code</li>
-                    <li>Example: 1633 Main Street, Springfield, IL, 62701</li>
-                </ul>
-            </div>
-            </div>
-            @if (residentialAddress.errors?.['pattern'] && residentialAddress.touched) {
-            <span class="error">Use the format: number street name, City, State/Province, ZIP code.</span>
-            }
-            </div>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="countryOfResidence">Country of Residence:</label>
-            <select id="countryOfResidence" name="countryOfResidence" formControlName="countryOfResidence" required>
-                <option value="" disabled>Select your country of residence</option>
-                @for (c of countries; track c.code) {
-                <option [value]="c.code">{{ c.name }}</option>
-                }
-            </select>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="countryOfCitizenship">Country of Citizenship:</label>
-            <select id="countryOfCitizenship" name="countryOfCitizenship" formControlName="countryOfCitizenship" required>
-                <option value="" disabled>Select your country of citizenship</option>
-                @for (c of countries; track c.code) {
-                <option [value]="c.code">{{ c.name }}</option>
-                }
-            </select>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="occupation">Occupation:</label>
-            <input type="text" id="occupation" name="occupation" formControlName="occupation" placeholder="What is your occupation?" required>
-            </div>
-            <br>
-            <div class="fields">
-            <label for="Employer">Employer:</label>
-            <input type="text" id="Employer" name="Employer" formControlName="Employer" placeholder="What is your employer?" required>
-            </div>
-            <br>
-            <div class="fields">
-            <button type="submit" [disabled]="userForm.invalid">Submit</button>
-            </div>
+<app-admin-navigation active="customer" />
+<form novalidate [attr.aria-busy]="submitting()" [formGroup]="userForm" (ngSubmit)="onSubmit()">
+    <div class="my-box wide-form">
+        <div class="page-heading">
+            <h1>New customer onboarding</h1>
+            <p>Enter the customer's information to start verification.</p>
+            <p class="form-guidance">All fields are required unless marked optional.</p>
         </div>
-    </form>
-</body>
-</html>
+        <section class="form-section">
+            <h2>Customer login details</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <label for="CustomerUsername">Username:</label>
+                    <input
+                        [attr.aria-invalid]="username.invalid && username.touched"
+                        [attr.aria-describedby]="fieldError(username, 'Username') ? 'CustomerUsernameError' : null"
+                        type="text"
+                        id="CustomerUsername"
+                        name="username"
+                        formControlName="username"
+                        placeholder="Choose a username for the customer"
+                        autocomplete="off"
+                        required
+                    />
+                    @if (fieldError(username, 'Username'); as error) {
+                        <span class="inline-error" id="CustomerUsernameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <div class="password-container">
+                        <label for="CustomerPassword">Password:</label>
+                        <input
+                            [attr.aria-invalid]="password.invalid && password.touched"
+                            [attr.aria-describedby]="fieldError(password, 'Password') ? 'CustomerPasswordError' : null"
+                            type="password"
+                            id="CustomerPassword"
+                            name="password"
+                            formControlName="password"
+                            placeholder="Choose a password for the customer"
+                            autocomplete="new-password"
+                            (focus)="showModal('password')"
+                            (blur)="hideModal()"
+                            required
+                        />
+                        @if (fieldError(password, 'Password'); as error) {
+                            <span class="inline-error" id="CustomerPasswordError">{{ error }}</span>
+                        }
+                        <div id="passwordModal" class="modal" [class.show]="activeModal === 'password'">
+                            <div class="modal-content">
+                                <ul class="modal-text">
+                                    <li><strong>Password must be:</strong></li>
+                                    <li>at least 8 characters long</li>
+                                    <li>have at least one uppercase letter</li>
+                                    <li>have at least one lowercase letter</li>
+                                    <li>have at least one number</li>
+                                    <li>have at least one special character</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fields">
+                    <label for="recoveryQuestion">Password recovery question:</label>
+                    <select
+                        [attr.aria-invalid]="passwordRecoveryQuestion.invalid && passwordRecoveryQuestion.touched"
+                        [attr.aria-describedby]="
+                            fieldError(passwordRecoveryQuestion, 'Recovery question') ? 'recoveryQuestionError' : null
+                        "
+                        id="recoveryQuestion"
+                        name="passwordRecoveryQuestion"
+                        formControlName="passwordRecoveryQuestion"
+                        required
+                    >
+                        <option value="" disabled>Select a question</option>
+                        @for (q of questions; track q) {
+                            <option [value]="q">{{ q }}</option>
+                        }
+                    </select>
+                    @if (fieldError(passwordRecoveryQuestion, 'Recovery question'); as error) {
+                        <span class="inline-error" id="recoveryQuestionError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="recoveryAnswer">Answer:</label>
+                    <input
+                        [attr.aria-invalid]="passwordRecoveryAnswer.invalid && passwordRecoveryAnswer.touched"
+                        [attr.aria-describedby]="
+                            fieldError(passwordRecoveryAnswer, 'Recovery answer') ? 'recoveryAnswerError' : null
+                        "
+                        type="text"
+                        id="recoveryAnswer"
+                        name="passwordRecoveryAnswer"
+                        formControlName="passwordRecoveryAnswer"
+                        placeholder="Enter the customer's answer"
+                        autocomplete="off"
+                        required
+                    />
+                    @if (fieldError(passwordRecoveryAnswer, 'Recovery answer'); as error) {
+                        <span class="inline-error" id="recoveryAnswerError">{{ error }}</span>
+                    }
+                </div>
+            </div>
+        </section>
+        <section class="form-section">
+            <h2>Personal information</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <label for="FirstName">First Name:</label>
+                    <input
+                        [attr.aria-invalid]="firstName.invalid && firstName.touched"
+                        [attr.aria-describedby]="fieldError(firstName, 'First name') ? 'FirstNameError' : null"
+                        type="text"
+                        id="FirstName"
+                        name="FirstName"
+                        formControlName="FirstName"
+                        placeholder="Enter your first name"
+                        required
+                    />
+                    @if (fieldError(firstName, 'First name'); as error) {
+                        <span class="inline-error" id="FirstNameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="MiddleName">Middle name (optional):</label>
+                    <input
+                        [attr.aria-invalid]="middleName.invalid && middleName.touched"
+                        [attr.aria-describedby]="fieldError(middleName, 'Middle name') ? 'MiddleNameError' : null"
+                        type="text"
+                        id="MiddleName"
+                        name="MiddleName"
+                        formControlName="MiddleName"
+                        placeholder="Enter your middle name"
+                    />
+                    @if (fieldError(middleName, 'Middle name'); as error) {
+                        <span class="inline-error" id="MiddleNameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="LastName">Last Name:</label>
+                    <input
+                        [attr.aria-invalid]="lastName.invalid && lastName.touched"
+                        [attr.aria-describedby]="fieldError(lastName, 'Last name') ? 'LastNameError' : null"
+                        type="text"
+                        id="LastName"
+                        name="LastName"
+                        formControlName="LastName"
+                        placeholder="Enter your last name"
+                        required
+                    />
+                    @if (fieldError(lastName, 'Last name'); as error) {
+                        <span class="inline-error" id="LastNameError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="DateOfBirth">Date of Birth:</label>
+                    <input
+                        [attr.aria-invalid]="dateOfBirth.invalid && dateOfBirth.touched"
+                        [attr.aria-describedby]="fieldError(dateOfBirth, 'Date of birth') ? 'DateOfBirthError' : null"
+                        type="date"
+                        id="DateOfBirth"
+                        name="DateOfBirth"
+                        formControlName="DateOfBirth"
+                        [max]="maxBirthDate"
+                        required
+                    />
+                    @if (fieldError(dateOfBirth, 'Date of birth'); as error) {
+                        <span class="inline-error" id="DateOfBirthError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <fieldset
+                        class="gender-options"
+                        [attr.aria-invalid]="gender.invalid && gender.touched"
+                        [attr.aria-describedby]="fieldError(gender, 'Gender') ? 'GenderError' : null"
+                    >
+                        <legend>Gender:</legend>
+                        <input type="radio" id="male" name="Gender" formControlName="Gender" value="Male" required />
+                        <label for="male">Male</label>
+                        <input
+                            type="radio"
+                            id="female"
+                            name="Gender"
+                            formControlName="Gender"
+                            value="Female"
+                            required
+                        />
+                        <label for="female">Female</label>
+                        <input type="radio" id="other" name="Gender" formControlName="Gender" value="Other" required />
+                        <label for="other">Other</label>
+                    </fieldset>
+                    @if (fieldError(gender, 'Gender'); as error) {
+                        <span class="inline-error" id="GenderError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="taxIdType">Tax ID Type:</label>
+                    <select
+                        [attr.aria-invalid]="taxIdType.invalid && taxIdType.touched"
+                        [attr.aria-describedby]="fieldError(taxIdType, 'Tax ID type') ? 'taxIdTypeError' : null"
+                        id="taxIdType"
+                        name="taxIdType"
+                        formControlName="taxIdType"
+                        required
+                    >
+                        <option value="" disabled>Select your tax ID type</option>
+                        <option value="SSN">SSN (Social Security Number)</option>
+                        <option value="ITIN">ITIN (Individual Taxpayer Identification Number)</option>
+                        <option value="EIN">EIN (Employer Identification Number)</option>
+                    </select>
+                    @if (fieldError(taxIdType, 'Tax ID type'); as error) {
+                        <span class="inline-error" id="taxIdTypeError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <div class="taxid-container">
+                        <label for="taxIdNumber">Tax ID Number:</label>
+                        <input
+                            [attr.aria-invalid]="taxIdNumber.invalid && taxIdNumber.touched"
+                            [attr.aria-describedby]="
+                                fieldError(taxIdNumber, 'Tax ID number') ? 'taxIdNumberError' : null
+                            "
+                            [type]="showTaxId ? 'text' : 'password'"
+                            id="taxIdNumber"
+                            name="taxIdNumber"
+                            formControlName="taxIdNumber"
+                            placeholder="Enter your tax ID number"
+                            autocomplete="off"
+                            required
+                        />
+                        @if (fieldError(taxIdNumber, 'Tax ID number'); as error) {
+                            <span class="inline-error" id="taxIdNumberError">{{ error }}</span>
+                        }
+                        <button class="link-button" type="button" (click)="toggleTaxId()">
+                            {{ showTaxId ? 'Hide' : 'Show' }}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <section class="form-section">
+            <h2>Address and employment</h2>
+            <div class="form-grid">
+                <div class="fields full-width">
+                    <div class="address-container">
+                        <label for="residentialAddress">Residential Address:</label>
+                        <input
+                            [attr.aria-invalid]="residentialAddress.invalid && residentialAddress.touched"
+                            [attr.aria-describedby]="
+                                fieldError(residentialAddress, 'Residential address') ? 'residentialAddressError' : null
+                            "
+                            type="text"
+                            id="residentialAddress"
+                            name="residentialAddress"
+                            formControlName="residentialAddress"
+                            placeholder="1633 Main Street, Springfield, IL, 62701"
+                            (focus)="showModal('address')"
+                            (blur)="hideModal()"
+                            required
+                        />
+                        @if (fieldError(residentialAddress, 'Residential address'); as error) {
+                            <span class="inline-error" id="residentialAddressError">{{ error }}</span>
+                        }
+                        <div id="addressModal" class="modal" [class.show]="activeModal === 'address'">
+                            <div class="modal-content">
+                                <ul class="modal-text">
+                                    <li><strong>Address format:</strong></li>
+                                    <li>number street name, City, State/Province, ZIP code</li>
+                                    <li>Example: 1633 Main Street, Springfield, IL, 62701</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="fields">
+                    <label for="countryOfResidence">Country of Residence:</label>
+                    <select
+                        [attr.aria-invalid]="countryOfResidence.invalid && countryOfResidence.touched"
+                        [attr.aria-describedby]="
+                            fieldError(countryOfResidence, 'Country of residence') ? 'countryOfResidenceError' : null
+                        "
+                        id="countryOfResidence"
+                        name="countryOfResidence"
+                        formControlName="countryOfResidence"
+                        required
+                    >
+                        <option value="" disabled>Select your country of residence</option>
+                        @for (c of countries; track c.code) {
+                            <option [value]="c.code">{{ c.name }}</option>
+                        }
+                    </select>
+                    @if (fieldError(countryOfResidence, 'Country of residence'); as error) {
+                        <span class="inline-error" id="countryOfResidenceError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="countryOfCitizenship">Country of Citizenship:</label>
+                    <select
+                        [attr.aria-invalid]="countryOfCitizenship.invalid && countryOfCitizenship.touched"
+                        [attr.aria-describedby]="
+                            fieldError(countryOfCitizenship, 'Country of citizenship')
+                                ? 'countryOfCitizenshipError'
+                                : null
+                        "
+                        id="countryOfCitizenship"
+                        name="countryOfCitizenship"
+                        formControlName="countryOfCitizenship"
+                        required
+                    >
+                        <option value="" disabled>Select your country of citizenship</option>
+                        @for (c of countries; track c.code) {
+                            <option [value]="c.code">{{ c.name }}</option>
+                        }
+                    </select>
+                    @if (fieldError(countryOfCitizenship, 'Country of citizenship'); as error) {
+                        <span class="inline-error" id="countryOfCitizenshipError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="occupation">Occupation:</label>
+                    <input
+                        [attr.aria-invalid]="occupation.invalid && occupation.touched"
+                        [attr.aria-describedby]="fieldError(occupation, 'Occupation') ? 'occupationError' : null"
+                        type="text"
+                        id="occupation"
+                        name="occupation"
+                        formControlName="occupation"
+                        placeholder="What is your occupation?"
+                        required
+                    />
+                    @if (fieldError(occupation, 'Occupation'); as error) {
+                        <span class="inline-error" id="occupationError">{{ error }}</span>
+                    }
+                </div>
+                <div class="fields">
+                    <label for="Employer">Employer:</label>
+                    <input
+                        [attr.aria-invalid]="employer.invalid && employer.touched"
+                        [attr.aria-describedby]="fieldError(employer, 'Employer') ? 'EmployerError' : null"
+                        type="text"
+                        id="Employer"
+                        name="Employer"
+                        formControlName="Employer"
+                        placeholder="What is your employer?"
+                        required
+                    />
+                    @if (fieldError(employer, 'Employer'); as error) {
+                        <span class="inline-error" id="EmployerError">{{ error }}</span>
+                    }
+                </div>
+            </div>
+        </section>
+        <section class="form-section">
+            <h2>Account details</h2>
+            <div class="form-grid">
+                <div class="fields">
+                    <label for="typeOfAccount">Individual/Joint?</label>
+                    <select
+                        [attr.aria-invalid]="typeOfAccount.invalid && typeOfAccount.touched"
+                        [attr.aria-describedby]="
+                            fieldError(typeOfAccount, 'Account type') ? 'typeOfAccountError' : null
+                        "
+                        id="typeOfAccount"
+                        name="accountType"
+                        formControlName="typeOfAccount"
+                        required
+                    >
+                        <option value="" disabled>Select your account type</option>
+                        <option value="Individual">Individual</option>
+                        <option value="Joint">Joint</option>
+                    </select>
+                    @if (fieldError(typeOfAccount, 'Account type'); as error) {
+                        <span class="inline-error" id="typeOfAccountError">{{ error }}</span>
+                    }
+                </div>
+                @if (typeOfAccount.value === 'Joint') {
+                    <div class="fields">
+                        <div class="joint-container">
+                            <label for="jointCustomerId">Joint Customer ID:</label>
+                            <input
+                                [attr.aria-invalid]="jointCustomerId.invalid && jointCustomerId.touched"
+                                [attr.aria-describedby]="
+                                    fieldError(jointCustomerId, 'Joint customer ID') ? 'jointCustomerIdError' : null
+                                "
+                                type="number"
+                                id="jointCustomerId"
+                                name="jointCustomerId"
+                                formControlName="jointCustomerId"
+                                placeholder="Enter the second holder's customer ID"
+                                min="1"
+                                step="1"
+                                (focus)="hideModal()"
+                            />
+                            @if (fieldError(jointCustomerId, 'Joint customer ID'); as error) {
+                                <span class="inline-error" id="jointCustomerIdError">{{ error }}</span>
+                            }
+                            <div id="jointCustomerModal" class="modal" [class.show]="activeModal === 'jointCustomer'">
+                                <div class="modal-content">
+                                    <ul class="modal-text">
+                                        <li><strong>This customer doesn't exist.</strong></li>
+                                        <li>Check the ID, or submit the second holder's own form first to get one.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </section>
+        <div class="form-footer onboarding-footer">
+            @if (message()) {
+                <p class="inline-error" role="alert">{{ message() }}</p>
+            }
+            <a class="link back-link" routerLink="/admin/home">
+                <span aria-hidden="true">←</span>
+                Back to tickets
+            </a>
+            <button type="submit" class="button" [disabled]="submitting()">
+                {{ submitting() ? 'Submitting...' : 'Submit' }}
+            </button>
+        </div>
+    </div>
+</form>

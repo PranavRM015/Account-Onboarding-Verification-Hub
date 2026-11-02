@@ -1,7 +1,3 @@
-.my-box {
-    width: 520px;
-}
-
 .username-container,
 .password-container,
 .address-container {
@@ -10,9 +6,5 @@
 }
 
 .address-container .modal {
-    width: 300px;
-}
-
-label {
-    margin-top: 10px;
+    width: 100%;
 }

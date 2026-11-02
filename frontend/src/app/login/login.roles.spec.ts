@@ -57,7 +57,8 @@ describe('Login for each role', () => {
     http.expectOne('/api/admins/login').flush({ role: 'Admin', token: 't', username: 'someone', message: 'ok', expiresAt: '' });
     await harness.fixture.whenStable();
 
-    expect(TestBed.inject(Router).url).toBe('/inputForm');
+    expect(TestBed.inject(Router).url).toBe('/admin/home');
+    http.expectOne('/api/admins/tickets').flush([]);
     expect(localStorage.getItem('authRole')).toBe('Admin');
   });
 
@@ -78,7 +79,30 @@ describe('Login for each role', () => {
     http.expectOne('/api/users/login').flush('This account is locked for 15 more minutes.', { status: 423, statusText: 'Locked' });
     await harness.fixture.whenStable();
 
-    expect(window.alert).toHaveBeenCalledWith('This account is locked for 15 more minutes.');
+    harness.detectChanges();
+    expect(harness.routeNativeElement!.textContent).toContain('This account is locked for 15 more minutes.');
+    expect(window.alert).not.toHaveBeenCalled();
     expect(localStorage.getItem('authToken')).toBeNull();
+  });
+
+  it('blocks repeated submits while pending and allows retry after an error', async () => {
+    await submit('/admin/login');
+    harness.detectChanges();
+    const button = harness.routeNativeElement!.querySelector<HTMLButtonElement>('button[type=submit]')!;
+    expect(button.disabled).toBeTrue();
+    expect(button.textContent).toContain('Signing in...');
+
+    // Submitting with Enter must be guarded too, even when the button is disabled.
+    harness.routeNativeElement!.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    http.expectOne('/api/admins/login').flush('Unavailable', { status: 503, statusText: 'Unavailable' });
+    harness.detectChanges();
+    expect(button.disabled).toBeFalse();
+    expect(harness.routeNativeElement!.querySelector('[role=alert]')!.textContent).toContain('Unable to connect to the server. Please try again shortly.');
+
+    button.click();
+    http.expectOne('/api/admins/login').flush('Invalid', { status: 401, statusText: 'Unauthorized' });
+    harness.detectChanges();
+    expect(button.disabled).toBeFalse();
+    expect(window.alert).not.toHaveBeenCalled();
   });
 });
