@@ -1,19 +1,27 @@
 .page {
-    max-width: 720px;
+    max-width: 1040px;
     margin: 0 auto;
-    padding: 20px;
+    padding: 32px 24px;
     font-family: Arial, sans-serif;
 }
 
 .box {
-    border: 2px solid #ffffff;
+    border: 1px solid #ffffff;
     border-radius: 8px;
-    padding: 12px 20px;
-    margin: 15px 0;
+    padding: 24px;
+    margin: 24px 0;
+    overflow-wrap: anywhere;
 }
 
 .box h2 {
     margin-top: 0;
+}
+
+.result-columns {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+    align-items: start;
 }
 
 .accepted h2 {
@@ -43,11 +51,31 @@
 .actions {
     display: flex;
     gap: 20px;
+    flex-wrap: wrap;
+    align-items: center;
     margin: 15px 0;
 }
 
 .actions a {
     color: #ffffff;
+}
+
+.actions .button {
+    margin: 0;
+    text-decoration: none;
+}
+
+@media (max-width: 600px) {
+    .result-columns {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0;
+    }
+    .page {
+        padding: 24px 16px;
+    }
+    .box {
+        padding: 20px;
+    }
 }
 
 .error {

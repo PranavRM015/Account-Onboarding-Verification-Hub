@@ -1,6 +1,7 @@
 import { Component, signal } from '@angular/core';
 import { RouterOutlet, Routes } from '@angular/router';
 import { Home } from './home/home';
+import { AdminHome } from './admin-home/admin-home';
 import { Signup } from './signup/signup';
 import { Login } from './login/login';
 import { Submit } from './submit/submit';
@@ -11,7 +12,6 @@ import { UserSignup } from './user-signup/user-signup';
 import { UserHome } from './user-home/user-home';
 import { ForgotPassword } from './forgot-password/forgot-password';
 import { RoleChoice } from './role-choice/role-choice';
-import { AdminHome } from './admin-home/admin-home';
 import { PendingOnboarding } from './pending-onboarding/pending-onboarding';
 import { adminGuard, userGuard } from './auth/auth.guard';
 

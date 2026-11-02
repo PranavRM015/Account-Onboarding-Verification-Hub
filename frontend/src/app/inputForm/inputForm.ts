@@ -1,19 +1,24 @@
-import { Component, inject } from '@angular/core';
+import { AdminNavigation } from '../shared/admin-navigation';
+import { Component, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { FormControl, FormGroup, FormsModule, ReactiveFormsModule, ValidatorFn, Validators } from '@angular/forms';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router, ActivatedRoute, RouterLink } from '@angular/router';
 
 import { countries } from '../shared/countries';
-import { passwordControl, recoveryQuestions, usernameControl } from '../shared/form-rules';
+import { fieldError, connectionErrorMessage, passwordControl, recoveryQuestions, usernameControl } from '../shared/form-rules';
 
 @Component({
-  imports: [FormsModule, ReactiveFormsModule],
+  imports: [AdminNavigation, FormsModule, ReactiveFormsModule, RouterLink],
   selector: 'app-form',
   standalone: true,
   styleUrls: ['./inputForm.css'],
   templateUrl: './inputForm.html',
 })
 export class UserFormComponent {
+  readonly fieldError = fieldError;
+  readonly message = signal('');
+  readonly submitting = signal(false);
   // Instantiate the FormGroup matching the name in the HTML
   readonly firstName = new FormControl('', {
     nonNullable: true,
@@ -165,7 +170,9 @@ export class UserFormComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
   onSubmit(): void {
-    if (this.userForm.invalid) { this.userForm.markAllAsTouched(); return; }
+    if (this.submitting()) { return; }
+    this.message.set('');
+    if (this.userForm.invalid) { this.userForm.markAllAsTouched(); this.message.set('Complete all required fields and correct any invalid details.'); return; }
     const FirstName = this.firstName.value;
     const MiddleName = this.middleName.value;
     const LastName = this.lastName.value;
@@ -206,6 +213,7 @@ export class UserFormComponent {
       lastName: requestBody.LastName,
     });
 
+    this.submitting.set(true);
     if (typeOfAccount !== 'Joint') {
       this.saveCustomer(requestBody);
       return;
@@ -217,6 +225,8 @@ export class UserFormComponent {
           this.saveCustomer(requestBody);
         } else {
           // The form is left untouched, so everything the user typed stays in place.
+          this.submitting.set(false);
+          this.message.set('The joint customer could not be found. Check the customer ID and try again.');
           this.showModal('jointCustomer');
         }
       },
@@ -225,7 +235,7 @@ export class UserFormComponent {
   }
 
   private saveCustomer(requestBody: object): void {
-    this.http.post<{ customerId: number; ticketId: number }>('/api/admins/inputForm', requestBody).subscribe({
+    this.http.post<{ customerId: number; ticketId: number }>('/api/admins/inputForm', requestBody).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (response) => {
         console.log('Customer saved successfully:', response);
         this.userForm.reset();
@@ -236,18 +246,24 @@ export class UserFormComponent {
   }
 
   private handleError(error: HttpErrorResponse): void {
+    this.submitting.set(false);
     console.error('Submission failed:', error);
+    const connectionMessage = connectionErrorMessage(error);
+    if (connectionMessage) {
+      this.message.set(connectionMessage);
+      return;
+    }
     if (error.status === 401) {
-      alert('Your session has expired. Please log in again.');
-      this.router.navigate(['/admin/login']);
+      this.message.set('Your session has expired. Please log in again.');
+      this.router.navigate(['/admin/login'], { state: { errorMessage: this.message() } });
     } else if (error.status === 403) {
-      alert('Only admins can sign customers up.');
+      this.message.set('Only admins can sign customers up.');
     } else if (error.status === 409 && !error.error?.customerId) {
-      alert(error.error?.message ?? 'That username is already taken.');
+      this.message.set(error.error?.message ?? 'That username is already taken.');
     } else if (error.status === 409) {
-      alert(`A customer with that tax ID already exists (Customer ID ${error.error?.customerId}).`);
+      this.message.set(`A customer with that tax ID already exists (Customer ID ${error.error?.customerId}).`);
     } else {
-      alert('Submission failed. Please try again.');
+      this.message.set('Submission failed. Please try again.');
     }
   }
 }

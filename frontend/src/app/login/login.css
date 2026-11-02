@@ -8,3 +8,12 @@
     color: white;
     font-family: Arial, sans-serif;
 }
+
+.fields > p {
+    margin: 0 0 16px;
+}
+
+.fields > .username-container,
+.fields > .password-container {
+    margin-top: 8px;
+}

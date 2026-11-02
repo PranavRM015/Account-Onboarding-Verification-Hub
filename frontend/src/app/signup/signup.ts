@@ -1,10 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { countries } from '../shared/countries';
 import {
-  adultOnly, maxBirthDate, nineDigits, passwordControl, recoveryQuestions, requiredText, serverMessage, usernameControl,
+  adultOnly, maxBirthDate, nineDigits, fieldError, connectionErrorMessage, passwordControl, recoveryQuestions, requiredText, serverMessage, usernameControl,
 } from '../shared/form-rules';
 
 // Admin signup: login details, the admin's own profile, and a password recovery question.
@@ -15,6 +16,9 @@ import {
   templateUrl: './signup.html',
 })
 export class Signup {
+  readonly fieldError = fieldError;
+  readonly message = signal('');
+  readonly submitting = signal(false);
   activeModal: 'username' | 'password' | null = null;
 
   showModal(which: string): void {
@@ -54,10 +58,14 @@ export class Signup {
   private router = inject(Router);
 
   acceptAdminCredentials(): void {
-    if (this.username.invalid) { this.activeModal = 'username'; return; }
-    if (this.password.invalid) { this.activeModal = 'password'; return; }
+    if (this.submitting()) { return; }
+    this.message.set('');
+    [this.username, this.password, ...this.details].forEach((control) => control.markAsTouched());
+    if (this.username.invalid) { this.activeModal = 'username'; this.message.set('Enter a username of 3 to 40 characters.'); return; }
+    if (this.password.invalid) { this.activeModal = 'password'; this.message.set('Enter a password that meets the requirements shown.'); return; }
     if (this.details.some((control) => control.invalid)) {
       this.details.forEach((control) => control.markAsTouched());
+      this.message.set('Complete all required fields and correct any invalid details.');
       return;
     }
 
@@ -76,21 +84,26 @@ export class Signup {
       passwordRecoveryAnswer: this.passwordRecoveryAnswer.value,
     };
 
-    this.http.post('/api/admins/signup', requestBody, { responseType: 'text' }).subscribe({
+    this.submitting.set(true);
+    this.http.post('/api/admins/signup', requestBody, { responseType: 'text' }).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: () => {
-        alert('Successfully signed up! Please log in with your new credentials.');
-        this.router.navigate(['/admin/login']);
+        this.router.navigate(['/admin/login'], { state: { notice: 'Account created. Please log in with your new credentials.' } });
       },
       error: (error) => {
+        const connectionMessage = connectionErrorMessage(error);
+        if (connectionMessage) {
+          this.message.set(connectionMessage);
+          return;
+        }
         if (error.status === 401) {
-          alert('Only a logged-in admin can create a new admin. Please log in first.');
-          this.router.navigate(['/admin/login']);
+          this.message.set('Only a logged-in admin can create a new admin. Please log in first.');
+          this.router.navigate(['/admin/login'], { state: { errorMessage: this.message() } });
         } else if (error.status === 429) {
-          alert('Too many attempts. Please wait a minute and try again.');
+          this.message.set('Too many attempts. Please wait a minute and try again.');
         } else if (error.status === 409) {
-          alert(serverMessage(error, 'That username is already taken.'));
+          this.message.set(serverMessage(error, 'That username is already taken.'));
         } else {
-          alert(serverMessage(error, 'Signup failed. Please try again.'));
+          this.message.set(serverMessage(error, 'Signup failed. Please try again.'));
         }
       },
     });

@@ -29,3 +29,101 @@
     <a class="button link-button" id="newCustomerButton" routerLink="/inputForm">Enter a new customer</a>
     <button type="button" class="button" id="logoutButton" (click)="logout()">Log out</button>
 </div>
+
+<div class="page" [attr.aria-busy]="loading()">
+    <div class="page-heading">
+        <div>
+            <h2>Onboarding tickets</h2>
+            <p>Tickets awaiting review, ordered by verification deadline.</p>
+        </div>
+    </div>
+
+    <div class="queue-controls">
+        <div class="search-field">
+            <label for="ticketSearch">Search tickets</label>
+            <input id="ticketSearch" type="search" [formControl]="search" placeholder="Customer name or ticket ID" />
+        </div>
+        <div>
+            <label for="ticketRisk">Risk rating</label>
+            <select id="ticketRisk" [formControl]="risk">
+                <option value="All">All risks</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+        </div>
+        <button class="button secondary" type="button" (click)="load()" [disabled]="loading()">
+            {{ loading() ? 'Refreshing...' : 'Refresh' }}
+        </button>
+    </div>
+
+    @if (loading()) {
+        <p role="status">Loading tickets...</p>
+    } @else if (errorMessage()) {
+        <p class="inline-error" role="alert">{{ errorMessage() }}</p>
+        <button class="button" type="button" (click)="load()">Try again</button>
+    } @else if (tickets().length === 0) {
+        <section class="empty-state">
+            <h2>No tickets awaiting review</h2>
+            <p>No tickets are currently awaiting review.</p>
+        </section>
+    } @else if (filteredTickets().length === 0) {
+        <section class="empty-state">
+            <h2>No matching tickets</h2>
+            <p>Try a different name, ticket ID or risk rating.</p>
+            <button class="button" type="button" (click)="clearFilters()">Clear filters</button>
+        </section>
+    } @else {
+        <div class="ticket-table">
+            <table aria-label="Tickets awaiting review">
+                <thead>
+                    <tr>
+                        <th scope="col">Ticket</th>
+                        <th scope="col">Customer</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Risk</th>
+                        <th scope="col">Deadline</th>
+                        <th scope="col"><span class="visually-hidden">Action</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (ticket of filteredTickets(); track ticket.ticketId) {
+                        <tr>
+                            <td data-label="Ticket">#{{ ticket.ticketId }}</td>
+                            <td data-label="Customer">{{ ticket.customerName }}</td>
+                            <td data-label="Status">Under review</td>
+                            <td
+                                data-label="Risk"
+                                class="rating"
+                                [class.high]="ticket.riskRating === 'High'"
+                                [class.medium]="ticket.riskRating === 'Medium'"
+                                [class.low]="ticket.riskRating === 'Low'"
+                            >
+                                {{ ticket.riskRating ?? 'Not rated' }}
+                            </td>
+                            <td data-label="Deadline">{{ ticket.verificationDeadline | date: 'mediumDate' }}</td>
+                            <td>
+                                <a
+                                    class="link"
+                                    [routerLink]="['/review', ticket.ticketId]"
+                                    [attr.aria-label]="
+                                        'Review ticket ' + ticket.ticketId + ' for ' + ticket.customerName
+                                    "
+                                >
+                                    Review →
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    @if (!loading() && !errorMessage() && tickets().length > 0) {
+        <p class="ticket-count" role="status">
+            Showing {{ filteredTickets().length }} of {{ tickets().length }}
+            {{ tickets().length === 1 ? 'ticket' : 'tickets' }} awaiting review
+        </p>
+    }
+</div>

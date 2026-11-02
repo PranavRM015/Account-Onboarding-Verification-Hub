@@ -1,0 +1,45 @@
+.admin-navigation {
+    border-bottom: 1px solid #555555;
+}
+
+.navigation-links {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 24px;
+    max-width: 1040px;
+    padding: 8px 24px;
+    margin: 0 auto;
+}
+
+a, button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: #93c5fd;
+    background: none;
+    border: 0;
+    padding: 6px 0;
+    font: 14px Arial, sans-serif;
+    text-decoration: underline;
+}
+
+button {
+    cursor: pointer;
+}
+
+a[aria-current=page] {
+    color: #ffffff;
+    font-weight: bold;
+    text-decoration: none;
+}
+
+button:disabled {
+    cursor: wait;
+}
+
+@media (max-width: 760px) {
+    .navigation-links {
+        padding: 8px 16px;
+    }
+}

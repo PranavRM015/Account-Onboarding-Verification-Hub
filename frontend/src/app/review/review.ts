@@ -1,5 +1,7 @@
-import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
+import { AdminNavigation } from '../shared/admin-navigation';
+import { Component, DestroyRef, OnInit, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -9,7 +11,7 @@ import { TicketDetails, flagLabel, riskCodeLabel, riskCodeList } from '../ticket
 type ReviewAction = 'approve' | 'reject' | 'clear';
 
 @Component({
-  imports: [DatePipe, ReactiveFormsModule, RouterLink],
+  imports: [AdminNavigation, DatePipe, ReactiveFormsModule, RouterLink],
   selector: 'app-review',
   styleUrl: './review.css',
   templateUrl: './review.html',
@@ -23,7 +25,9 @@ export class Review implements OnInit {
   private ticketId = 0;
 
   readonly ticket = signal<TicketDetails | null>(null);
+  readonly unresolvedCount = computed(() => this.ticket()?.flags.filter((flag) => !flag.cleared).length ?? 0);
   readonly errorMessage = signal('');
+  readonly loading = signal(false);
   readonly notice = signal('');
   readonly action = signal<ReviewAction | null>(null);
   readonly clearFlagId = signal<number | null>(null);
@@ -46,7 +50,7 @@ export class Review implements OnInit {
   }
 
   hasUnclearedFlags(): boolean {
-    return this.ticket()?.flags.some((flag) => !flag.cleared) ?? false;
+    return this.unresolvedCount() > 0;
   }
 
   canApprove(): boolean {
@@ -63,6 +67,7 @@ export class Review implements OnInit {
   }
 
   openAction(action: ReviewAction, flagId: number | null = null): void {
+    if (this.loading() || this.submitting()) { return; }
     this.reason.reset('');
     this.notice.set('');
     this.errorMessage.set('');
@@ -71,13 +76,15 @@ export class Review implements OnInit {
   }
 
   closeModal(): void {
+    if (this.submitting()) { return; }
     this.action.set(null);
     this.clearFlagId.set(null);
   }
 
   confirm(): void {
     const action = this.action();
-    if (!action || this.reason.invalid || this.submitting()) { return; }
+    if (!action || this.reason.invalid || this.submitting() || this.loading()) { return; }
+    this.errorMessage.set('');
     const requestBody = { reason: this.reason.value.trim() };
     const baseUrl = `/api/admins/tickets/${this.ticketId}`;
     const url = action === 'clear' ? `${baseUrl}/flags/${this.clearFlagId()}/clear` : `${baseUrl}/${action}`;
@@ -91,7 +98,6 @@ export class Review implements OnInit {
       },
       error: (error) => {
         this.submitting.set(false);
-        this.closeModal();
         this.handleError(error);
       },
     });
@@ -103,14 +109,16 @@ export class Review implements OnInit {
       return;
     }
     this.errorMessage.set('');
-    this.http.get<TicketDetails>(`/api/admins/tickets/${this.ticketId}`).subscribe({
+    this.loading.set(true);
+    this.http.get<TicketDetails>(`/api/admins/tickets/${this.ticketId}`).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (ticket) => this.ticket.set(ticket),
       error: (error) => this.handleError(error),
     });
   }
 
   private refresh(message: string): void {
-    this.http.get<TicketDetails>(`/api/admins/tickets/${this.ticketId}`).subscribe({
+    this.loading.set(true);
+    this.http.get<TicketDetails>(`/api/admins/tickets/${this.ticketId}`).pipe(finalize(() => this.loading.set(false))).subscribe({
       next: (ticket) => {
         if (ticket.ticketStatus !== 'Review') {
           this.router.navigate(['/result', ticket.ticketId]);
@@ -126,8 +134,7 @@ export class Review implements OnInit {
   private handleError(error: HttpErrorResponse): void {
     console.error('Review request failed:', error);
     if (error.status === 401) {
-      alert('Your session has expired. Please log in again.');
-      this.router.navigate(['/admin/login']);
+      this.router.navigate(['/admin/login'], { state: { errorMessage: 'Your session has expired. Please log in again.' } });
       return;
     }
     const detail = typeof error.error === 'string' ? error.error : error.error?.title;

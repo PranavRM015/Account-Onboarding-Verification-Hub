@@ -1,14 +1,24 @@
 .home {
-    padding: 30px 16px;
+    padding: 36px 16px;
     text-align: center;
+}
+
+.home h1 {
+    max-width: 680px;
+    margin: 0 auto 12px;
+}
+
+.home > p {
+    margin: 0 auto 24px;
 }
 
 .cards {
     display: flex;
     flex-wrap: wrap;
-    gap: 32px;
+    gap: 24px;
     justify-content: center;
-    margin-top: 24px;
+    margin: 32px auto 0;
+    max-width: 660px;
 }
 
 .big-button {

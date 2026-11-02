@@ -95,4 +95,36 @@ describe('Admin signup profile fields', () => {
     expect(options.length).toBe(5); // the placeholder plus the four questions
     expect(options[1].textContent).toContain('favorite food');
   });
+
+  it('shows connection feedback without clearing details or exposing the gateway response', () => {
+    fillEverything();
+    component.acceptAdminCredentials();
+    http.expectOne('/api/admins/signup').flush('<html>Bad Gateway</html>', { status: 502, statusText: 'Bad Gateway' });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent)
+      .toContain('Unable to connect to the server. Please try again shortly.');
+    expect(component.username.value).toBe('reviewer_one');
+    expect(component.passwordRecoveryAnswer.value).toBe('Lincoln Elementary');
+    expect(component.submitting()).toBeFalse();
+    expect(fixture.nativeElement.textContent).not.toContain('<html>');
+  });
+
+  it('shows required fields after submitting and clears a corrected field error', () => {
+    expect(fixture.nativeElement.querySelector('#FirstNameError')).toBeNull();
+    component.acceptAdminCredentials();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#FirstNameError').textContent).toContain('First name is required.');
+    expect(fixture.nativeElement.querySelector('#UsernameError').textContent).toContain('Username is required.');
+    expect(fixture.nativeElement.querySelector('#FirstName').getAttribute('aria-invalid')).toBe('true');
+    expect(fixture.nativeElement.querySelector('#FirstName').getAttribute('aria-describedby')).toBe('FirstNameError');
+    expect(fixture.nativeElement.querySelector('#MiddleNameError')).toBeNull();
+    http.expectNone('/api/admins/signup');
+
+    component.firstName.setValue('Alex');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('#FirstNameError')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#FirstName').getAttribute('aria-invalid')).toBe('false');
+  });
 });

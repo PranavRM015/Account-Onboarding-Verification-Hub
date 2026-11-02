@@ -1,8 +1,9 @@
 import { Component, inject, signal } from '@angular/core';
+import { finalize } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { FormControl, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { passwordControl, serverMessage, usernameControl } from '../shared/form-rules';
+import { connectionErrorMessage, passwordControl, serverMessage, usernameControl } from '../shared/form-rules';
 
 // Step 1: ask for the username and show the recovery question. Step 2: the answer plus a new password.
 @Component({
@@ -21,6 +22,7 @@ export class ForgotPassword {
   readonly step = signal<'username' | 'answer'>('username');
   readonly question = signal('');
   readonly message = signal('');
+  readonly submitting = signal(false);
   activeModal: 'password' | null = null;
 
   readonly username = usernameControl();
@@ -40,13 +42,15 @@ export class ForgotPassword {
   }
 
   findQuestion(): void {
+    if (this.submitting()) { return; }
     this.message.set('');
     if (this.username.invalid) {
       this.username.markAsTouched();
       this.message.set('Enter your username (3 to 40 characters).');
       return;
     }
-    this.http.get<{ question: string }>(`${this.api}/recovery-question`, { params: { username: this.username.value } }).subscribe({
+    this.submitting.set(true);
+    this.http.get<{ question: string }>(`${this.api}/recovery-question`, { params: { username: this.username.value } }).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (response) => {
         this.question.set(response.question);
         this.step.set('answer');
@@ -56,6 +60,7 @@ export class ForgotPassword {
   }
 
   resetPassword(): void {
+    if (this.submitting()) { return; }
     this.message.set('');
     if (this.answer.invalid) {
       this.message.set('Enter the answer to your recovery question.');
@@ -63,6 +68,7 @@ export class ForgotPassword {
     }
     if (this.newPassword.invalid) {
       this.activeModal = 'password';
+      this.message.set('Enter a new password that meets the requirements shown.');
       return;
     }
     if (!this.passwordsMatch) {
@@ -70,16 +76,17 @@ export class ForgotPassword {
       return;
     }
     const requestBody = { username: this.username.value, answer: this.answer.value, newPassword: this.newPassword.value };
-    this.http.post(`${this.api}/reset-password`, requestBody).subscribe({
+    this.submitting.set(true);
+    this.http.post(`${this.api}/reset-password`, requestBody).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: () => {
-        alert('Your password has been changed. Please log in with your new password.');
-        this.router.navigate([`/${this.role}/login`]);
+        this.router.navigate([`/${this.role}/login`], { state: { notice: 'Your password has been changed. Please log in with your new password.' } });
       },
       error: (error) => this.fail(error, 'Could not reset your password. Please try again.'),
     });
   }
 
   backToUsername(): void {
+    if (this.submitting()) { return; }
     this.step.set('username');
     this.answer.reset();
     this.newPassword.reset();
@@ -88,6 +95,11 @@ export class ForgotPassword {
   }
 
   private fail(error: { status: number; error?: unknown }, fallback: string): void {
+    const connectionMessage = connectionErrorMessage(error);
+    if (connectionMessage) {
+      this.message.set(connectionMessage);
+      return;
+    }
     if (error.status === 429) {
       this.message.set('Too many attempts. Please wait a minute and try again.');
     } else if (error.status === 423) {

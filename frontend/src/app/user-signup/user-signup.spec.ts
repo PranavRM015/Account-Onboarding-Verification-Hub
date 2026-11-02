@@ -99,13 +99,44 @@ describe('UserSignup', () => {
     expect(component.residentialAddress.hasError('pattern')).toBeTrue();
   });
 
+  it('shows format guidance beneath invalid fields after submitting', () => {
+    fillEverything();
+    component.taxIdNumber.setValue('12345');
+    component.residentialAddress.setValue('somewhere');
+    component.signUp();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('#TaxIdNumberError').textContent).toContain('exactly 9 digits');
+    expect(fixture.nativeElement.querySelector('#ResidentialAddressError').textContent).toContain('City, State/Province, ZIP code');
+    http.expectNone('/api/users/signup');
+  });
+
   it('tells the person when the username is taken', () => {
     fillEverything();
     component.signUp();
 
     http.expectOne('/api/users/signup').flush('That username is already taken.', { status: 409, statusText: 'Conflict' });
 
-    expect(window.alert).toHaveBeenCalledWith('That username is already taken.');
+    fixture.detectChanges();
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('That username is already taken.');
+    expect(window.alert).not.toHaveBeenCalled();
+  });
+
+  it('sends one signup while pending and keeps entered details after an error', () => {
+    fillEverything();
+    component.signUp();
+    component.signUp();
+    fixture.detectChanges();
+    const button = fixture.nativeElement.querySelector('button[type=submit]');
+    expect(button.disabled).toBeTrue();
+    expect(button.textContent).toContain('Creating account...');
+
+    http.expectOne('/api/users/signup').flush('Unavailable', { status: 503, statusText: 'Unavailable' });
+    fixture.detectChanges();
+    expect(button.disabled).toBeFalse();
+    expect(component.username.value).toBe('casey_customer');
+    expect(component.passwordRecoveryAnswer.value).toBe('Pizza');
+    expect(fixture.nativeElement.querySelector('[role=alert]').textContent).toContain('Unable to connect to the server. Please try again shortly.');
   });
 
   it('shows the username hint while the username box is focused and hides it afterwards', () => {
