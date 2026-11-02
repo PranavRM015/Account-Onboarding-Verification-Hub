@@ -53,7 +53,7 @@ export class Login {
     this.submitting.set(true);
     this.http.post<LoginResponse>(this.endpoint, requestBody).pipe(finalize(() => this.submitting.set(false))).subscribe({
       next: (response) => {
-        this.auth.saveSession(response.token, this.role === 'admin' ? 'Admin' : 'User');
+        this.auth.saveSession(response.token, this.role === 'admin' ? 'Admin' : 'User', response.firstName);
         this.router.navigate([this.role === 'admin' ? '/admin/home' : '/user/home']);
       },
       error: (error) => {

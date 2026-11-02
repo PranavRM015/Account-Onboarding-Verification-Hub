@@ -11,15 +11,18 @@ import { Result } from './result/result';
 import { UserSignup } from './user-signup/user-signup';
 import { UserHome } from './user-home/user-home';
 import { ForgotPassword } from './forgot-password/forgot-password';
+import { RoleChoice } from './role-choice/role-choice';
+import { PendingOnboarding } from './pending-onboarding/pending-onboarding';
 import { adminGuard, userGuard } from './auth/auth.guard';
 
 export const routes: Routes = [
   { path: '', component: Home },
-  { path: 'admin', component: Home, data: { role: 'admin' } },
-  { path: 'user', component: Home, data: { role: 'user' } },
+  { path: 'user', component: RoleChoice, data: { role: 'user' } },
+  { path: 'admin', component: RoleChoice, data: { role: 'admin' } },
+  { path: 'admin/home', component: AdminHome, canActivate: [adminGuard] },
+  { path: 'admin/pending/:customerId', component: PendingOnboarding, canActivate: [adminGuard] },
   { path: 'admin/signup', component: Signup },
   { path: 'admin/login', component: Login, data: { role: 'admin' } },
-  { path: 'admin/home', component: AdminHome, canActivate: [adminGuard] },
   { path: 'user/signup', component: UserSignup },
   { path: 'user/login', component: Login, data: { role: 'user' } },
   { path: 'user/home', component: UserHome, canActivate: [userGuard] },

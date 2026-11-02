@@ -1,39 +1,8 @@
 <div class="home">
-    @if (role) {
-        <h1 class="text">{{ role === 'user' ? 'User' : 'Admin' }} access</h1>
-        <p>
-            {{
-                role === 'user'
-                    ? 'Create an account or log in to get started.'
-                    : 'Log in to review onboarding, or create an admin account.'
-            }}
-        </p>
-        <div class="cards">
-            <section class="card" aria-label="Account access">
-                <a class="card-button" [id]="role + 'LoginButton'" [routerLink]="['/', role, 'login']">Log in</a>
-                <a class="card-button outline" [id]="role + 'SignupButton'" [routerLink]="['/', role, 'signup']">
-                    Sign up
-                </a>
-            </section>
-        </div>
-        <a class="link back-link" routerLink="/">
-            <span aria-hidden="true">←</span>
-            Choose another role
-        </a>
-    } @else {
-        <h1 class="text">Welcome to the Account Onboarding Verification Hub!</h1>
-        <p>Who are you signing in as?</p>
-        <div class="cards">
-            <section class="card" id="userCard">
-                <h2>User</h2>
-                <p>Customers opening an account.</p>
-                <a class="card-button" id="usersButton" routerLink="/user">Users</a>
-            </section>
-            <section class="card" id="adminCard">
-                <h2>Admin</h2>
-                <p>Staff who review and approve onboarding.</p>
-                <a class="card-button" id="adminsButton" routerLink="/admin">Admins</a>
-            </section>
-        </div>
-    }
+    <h1 class="text">Welcome to the Account Onboarding Verification Hub!</h1>
+    <p>Who are you?</p>
+    <div class="cards">
+        <a class="big-button" id="userButton" routerLink="/user">User</a>
+        <a class="big-button" id="adminButton" routerLink="/admin">Admin</a>
+    </div>
 </div>

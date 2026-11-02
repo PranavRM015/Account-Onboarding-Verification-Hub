@@ -54,6 +54,7 @@ namespace backend.Tests
         public HttpClient NewClient() => _factory.CreateClient();
         public void TrackAdmin(string username) => _admins.Add(username);
         public void TrackCustomer(string username) => _customerNames.Add(username);
+        public void TrackTicket(int ticketId) => _tickets.Add(ticketId); // for tickets made outside Submit, so cleanup removes them before their customers
         public string ConnectionString => Configuration.GetConnectionString("DefaultConnection")!;
 
         public async Task InitializeAsync()
@@ -88,13 +89,13 @@ namespace backend.Tests
         };
 
         // A complete, valid customer (user) signup body.
-        public object UserBody(string username, string password = Password) => new
+        public object UserBody(string username, string password = Password, string firstName = "Casey", string lastName = "Selfsignup") => new
         {
             username,
             password,
-            firstName = "Casey",
+            firstName,
             middleName = "",
-            lastName = "Selfsignup",
+            lastName,
             dateOfBirth = new DateTime(1985, 4, 12),
             gender = "Other",
             taxIdType = "SSN",
@@ -124,6 +125,16 @@ namespace backend.Tests
             var response = await NewClient().PostAsJsonAsync("/api/users/signup", UserBody(username));
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             return username;
+        }
+
+        // Signs a customer up on their own, with their own password and name; returns the username and the new CustomerId.
+        public async Task<(string Username, int CustomerId)> NewUser(string prefix, string password, string firstName, string lastName)
+        {
+            var username = $"{prefix}_{Guid.NewGuid():N}"[..20];
+            TrackCustomer(username);
+            var response = await NewClient().PostAsJsonAsync("/api/users/signup", UserBody(username, password, firstName, lastName));
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            return (username, Scalar<int>("SELECT CustomerId FROM Customers WHERE Username = @u", ("@u", username)));
         }
 
         // Runs a statement against the database, for things the API can't do, like moving a lockout into the past.

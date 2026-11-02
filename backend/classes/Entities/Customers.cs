@@ -47,6 +47,8 @@ namespace Customers{
         public string PasswordRecoveryAnswer { get; set; } = string.Empty; // salted hash of the answer
         public int FailedLoginCount { get; set; }
         public DateTime? LockoutEnd { get; set; }
+        // Set by the database (GETUTCDATE()) when the customer signs up; the admins' pending list is ordered by it.
+        public DateTime CreatedAt { get; set; }
     }
     public class CustomerConfiguration : IEntityTypeConfiguration<Customer>
     {
@@ -62,6 +64,7 @@ namespace Customers{
             builder.HasIndex(c => c.TaxIdHash)
                 .IsUnique()
                 .HasDatabaseName("UX_Customers_TaxIdHash");
+            builder.Property(c => c.CreatedAt).HasDefaultValueSql("GETUTCDATE()").ValueGeneratedOnAdd();
             builder.HasIndex(c => c.Username)
                 .IsUnique()
                 .HasDatabaseName("UX_Customers_Username");

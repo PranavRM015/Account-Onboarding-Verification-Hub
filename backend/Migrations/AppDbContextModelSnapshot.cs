@@ -177,6 +177,11 @@ namespace backend.Api.Migrations
                         .HasMaxLength(2)
                         .HasColumnType("char(2)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.Property<DateTime>("DateOfBirth")
                         .HasColumnType("date");
 
