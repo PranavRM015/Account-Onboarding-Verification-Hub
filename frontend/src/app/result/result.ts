@@ -1,4 +1,3 @@
-import { AdminNavigation } from '../shared/admin-navigation';
 import { Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { finalize } from 'rxjs';
@@ -6,9 +5,10 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { DatePipe } from '@angular/common';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TicketDetails, flagLabel, riskCodeLabel, riskCodeList } from '../ticket/ticketDetails';
+import { AuthService } from '../auth/auth.service';
 
 @Component({
-  imports: [AdminNavigation, DatePipe, RouterLink],
+  imports: [DatePipe, RouterLink],
   selector: 'app-result',
   styleUrl: './result.css',
   templateUrl: './result.html',
@@ -18,6 +18,7 @@ export class Result implements OnInit {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
+  private auth = inject(AuthService);
 
   readonly ticket = signal<TicketDetails | null>(null);
   readonly errorMessage = signal('');
@@ -44,6 +45,10 @@ export class Result implements OnInit {
 
   unclearedCount(): number {
     return this.ticket()?.flags.filter((flag) => !flag.cleared).length ?? 0;
+  }
+
+  logout(): void {
+    this.auth.logout().subscribe();
   }
 
   private load(ticketId: number): void {
