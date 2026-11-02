@@ -1,9 +1,13 @@
 <div class="home">
-    <h1 class="text">{{ title }}</h1>
+    <a class="back" id="backButton" routerLink="/">
+        <span aria-hidden="true">←</span>
+        Back to User and Admin selection
+    </a>
+    <h1 class="text">{{ title }} access</h1>
     <p>{{ blurb }}</p>
-    <div class="cards">
-        <a class="big-button" id="loginButton" [routerLink]="'/' + role + '/login'">Log in</a>
-        <a class="big-button outline" id="signupButton" [routerLink]="'/' + role + '/signup'">Sign up</a>
+    <div class="access-actions">
+        <a class="button" id="loginButton" [routerLink]="'/' + role + '/login'">Log in</a>
+        <div class="signup-divider">New here?</div>
+        <a class="button secondary" id="signupButton" [routerLink]="'/' + role + '/signup'">Sign up</a>
     </div>
-    <a class="back" id="backButton" routerLink="/">Back</a>
 </div>

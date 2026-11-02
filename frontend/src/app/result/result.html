@@ -120,11 +120,11 @@
 
         <section class="actions">
             @if (t.ticketStatus === 'Review') {
-                <a [routerLink]="['/review', t.ticketId]">Back to review</a>
+                <a class="button secondary" [routerLink]="['/review', t.ticketId]">Back to review</a>
             }
-            <a routerLink="/inputForm">Submit another customer</a>
-            <a routerLink="/admin/home">Waiting customers</a>
-            <button type="button" (click)="logout()">Log out</button>
+            <a class="button" routerLink="/inputForm">Submit another customer</a>
+            <a class="button secondary" routerLink="/admin/home">Waiting customers</a>
+            <button class="button secondary" type="button" (click)="logout()">Log out</button>
         </section>
     }
 </div>
