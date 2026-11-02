@@ -1,6 +1,18 @@
-<div class="my-box">
-    <h1 class="text" id="welcome">{{ adminName ? 'Welcome, ' + adminName + '!' : 'Welcome!' }}</h1>
-    <p>Here are the remaining customers you are responsible for onboarding.</p>
+<div class="admin-page">
+    <header class="page-heading">
+        <div>
+            <h1 class="text" id="welcome">{{ adminName ? 'Welcome, ' + adminName + '!' : 'Welcome!' }}</h1>
+            <p>Here are the remaining customers you are responsible for onboarding.</p>
+        </div>
+        <div class="actions">
+            <a class="button" id="newCustomerButton" routerLink="/inputForm">Enter a new customer</a>
+            <button type="button" class="button secondary" id="logoutButton" (click)="logout()">Log out</button>
+        </div>
+    </header>
+
+    <section class="waiting-customers" aria-labelledby="waitingHeading">
+        <h2 id="waitingHeading">Waiting customers</h2>
+        <p>Customers who signed up and are waiting for an onboarding ticket.</p>
 
     @switch (status()) {
         @case ('loading') {
@@ -26,9 +38,7 @@
         }
     }
 
-    <a class="button link-button" id="newCustomerButton" routerLink="/inputForm">Enter a new customer</a>
-    <button type="button" class="button" id="logoutButton" (click)="logout()">Log out</button>
-</div>
+    </section>
 
 <div class="page" [attr.aria-busy]="loading()">
     <div class="page-heading">
@@ -126,4 +136,5 @@
             {{ tickets().length === 1 ? 'ticket' : 'tickets' }} awaiting review
         </p>
     }
+</div>
 </div>

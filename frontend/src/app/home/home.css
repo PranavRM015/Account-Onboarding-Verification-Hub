@@ -1,54 +1,125 @@
 .home {
-    padding: 36px 16px;
-    text-align: center;
+    max-width: 508px;
+    margin: 0 auto;
+    padding: 52px 24px 56px;
 }
 
 .home h1 {
-    max-width: 680px;
-    margin: 0 auto 12px;
+    margin: 0 0 12px;
 }
 
 .home > p {
-    margin: 0 auto 24px;
+    margin: 0 0 28px;
 }
 
-.cards {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 24px;
-    justify-content: center;
-    margin: 32px auto 0;
-    max-width: 660px;
+.role-options, .access-actions {
+    display: grid;
+    gap: 16px;
 }
 
-.big-button {
-    background-color: #1d4ed8;
-    border: 2px solid #1d4ed8;
-    border-radius: 8px;
-    box-shadow: 0 6px 18px rgba(29, 78, 216, 0.35);
+.role-row {
+    position: relative;
+    padding: 20px 52px 20px 20px;
+    border: 1px solid #777777;
+    border-radius: 6px;
+}
+
+.role-row:hover {
+    border-color: #93c5fd;
+    background-color: #101828;
+}
+
+.role-row a {
     color: #ffffff;
-    font-size: 22px;
-    padding: 24px 0;
-    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
     text-decoration: none;
-    width: 220px;
 }
 
-.big-button:hover {
-    background-color: #1e40af;
+.role-row a::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
 }
 
-.big-button.outline {
-    background-color: #ffffff;
-    color: #1d4ed8;
+.role-row a:focus-visible {
+    outline: none;
 }
 
-.big-button.outline:hover {
-    background-color: #dbeafe;
+.role-row a:focus-visible::after {
+    outline: 3px solid #93c5fd;
+    outline-offset: 4px;
+}
+
+.role-row p {
+    margin: 8px 0 0;
+    color: #d1d5db;
+    font-size: 15px;
+}
+
+.role-arrow {
+    position: absolute;
+    right: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #93c5fd;
+    font-size: 22px;
+    pointer-events: none;
+}
+
+.access-actions .button {
+    margin: 0;
+    width: 100%;
+}
+
+.access-actions .button.secondary {
+    color: #93c5fd;
+    border-color: #93c5fd;
+}
+
+.access-actions .button.secondary:hover {
+    background-color: #172554;
+}
+
+.signup-divider {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    color: #d1d5db;
+    font-size: 14px;
+}
+
+.signup-divider::before, .signup-divider::after {
+    content: '';
+    height: 1px;
+    background-color: #555555;
+    flex: 1;
 }
 
 .back {
     color: #93c5fd;
-    display: inline-block;
-    margin-top: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 0;
+    margin-bottom: 20px;
+    font-size: 14px;
+    line-height: 1.5;
+    text-decoration: none;
+}
+
+.back:hover {
+    text-decoration: underline;
+}
+
+@media (max-width: 480px) {
+    .home {
+        padding: 32px 20px;
+    }
+
+    .role-row {
+        padding: 16px 48px 16px 16px;
+    }
 }

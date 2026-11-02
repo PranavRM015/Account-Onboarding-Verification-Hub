@@ -1,8 +1,16 @@
 <div class="home">
-    <h1 class="text">Welcome to the Account Onboarding Verification Hub!</h1>
-    <p>Who are you?</p>
-    <div class="cards">
-        <a class="big-button" id="userButton" routerLink="/user">User</a>
-        <a class="big-button" id="adminButton" routerLink="/admin">Admin</a>
+    <h1 class="text">Welcome</h1>
+    <p>Choose how you’d like to continue.</p>
+    <div class="role-options">
+        <div class="role-row">
+            <a id="userButton" routerLink="/user" aria-describedby="userDescription">User</a>
+            <p id="userDescription">Open an account and view your onboarding.</p>
+            <span class="role-arrow" aria-hidden="true">→</span>
+        </div>
+        <div class="role-row">
+            <a id="adminButton" routerLink="/admin" aria-describedby="adminDescription">Admin</a>
+            <p id="adminDescription">Review customers and manage onboarding.</p>
+            <span class="role-arrow" aria-hidden="true">→</span>
+        </div>
     </div>
 </div>
