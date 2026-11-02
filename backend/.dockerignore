@@ -1,0 +1,28 @@
+# Build artifacts
+bin/
+obj/
+
+# IDE files
+.vs/
+.idea/
+*.user
+*.suo
+
+# Dev secrets – supplied through environment variables in Docker
+appsettings.Development.json
+
+# Azure publish profile
+Properties/PublishProfiles/
+
+# Local overrides
+*.env
+appsettings.Local.json
+
+# Angular build output (not part of API source)
+wwwroot/
+
+# Local publish folders
+publish/
+publish-out/
+publish-check/
+publish-test/
