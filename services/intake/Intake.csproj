@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Assembly name keeps it consistent with the service folder name -->
+    <AssemblyName>Intake</AssemblyName>
+    <RootNamespace>Intake</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- EF Core SQL Server provider -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.12" />
+    <!-- EF Core design-time tools (dotnet ef migrations, scaffolding) -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.12">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <!-- Needed to catch SqlException (duplicate key errors) in controllers -->
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+  </ItemGroup>
+
+  <!--
+    Packages to be added in later steps:
+      Step 5 (admin intake): FluentValidation
+      Step 6 (interservice): Microsoft.AspNetCore.Authentication.JwtBearer
+  -->
+
+</Project>
