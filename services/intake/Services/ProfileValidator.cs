@@ -2,18 +2,14 @@ using Intake.DTOs;
 
 namespace Intake.Services;
 
-// Validates the customer profile fields that Intake is responsible for.
-// These rules mirror the monolith's CustomerValidator and the check
-// constraints on the Customers table.
-//
-// Credential fields (password, recovery question/answer) are intentionally
-// NOT validated here — those belong to the Identity service.
+// Validates customer profile fields. Credential validation (password strength,
+// recovery question) is Identity's responsibility — not checked here.
 public static class ProfileValidator
 {
     private static readonly string[] ValidGenders    = { "Male", "Female", "Other" };
     private static readonly string[] ValidTaxIdTypes = { "SSN", "ITIN", "EIN" };
 
-    // Returns null when the profile is valid, or an error message string.
+    // Returns null when valid, or an error message string.
     public static string? Validate(CustomerSignupDto dto)
     {
         if (string.IsNullOrWhiteSpace(dto.firstName))
@@ -29,7 +25,6 @@ public static class ProfileValidator
         if (dto.lastName.Length > 50)
             return "Last name cannot exceed 50 characters.";
 
-        // Customer must be at least 18 years old (same rule as the monolith).
         if (dto.dateOfBirth > DateTime.UtcNow.Date.AddYears(-18))
             return "Customer must be at least 18 years old.";
 
@@ -70,6 +65,6 @@ public static class ProfileValidator
         if (dto.employer.Length > 100)
             return "Employer cannot exceed 100 characters.";
 
-        return null; // all profile fields are valid
+        return null;
     }
 }

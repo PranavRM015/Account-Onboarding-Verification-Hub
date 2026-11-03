@@ -21,6 +21,8 @@ Supply these via `appsettings.Development.json` (local), `docker-compose.yml` (D
 | `Jwt__Key` | JWT signing key — must match the Identity service exactly |
 | `TaxIdHashPepper` | Pepper for TaxId hashing — must match the Identity service exactly |
 | `Cors__AllowedOrigins__0` | Allowed frontend origin, e.g. `http://localhost:4200` |
+| `Identity__BaseUrl` | Base URL of the Identity service, e.g. `http://localhost:5290` |
+| `Internal__ApiKey` | Shared secret sent in `X-Internal-Key` header to Identity |
 
 ## API endpoints (implemented incrementally)
 

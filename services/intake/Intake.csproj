@@ -19,12 +19,8 @@
     </PackageReference>
     <!-- Needed to catch SqlException (duplicate key errors) in controllers -->
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.1" />
+    <!-- JWT Bearer validation for admin-protected endpoints -->
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
   </ItemGroup>
-
-  <!--
-    Packages to be added in later steps:
-      Step 5 (admin intake): FluentValidation
-      Step 6 (interservice): Microsoft.AspNetCore.Authentication.JwtBearer
-  -->
 
 </Project>

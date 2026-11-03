@@ -8,28 +8,32 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Intake.Controllers;
 
-// POST /api/users/signup — customer profile portion of self-registration.
+// Handles customer self-registration. Saves the profile first, then asks Identity
+// to create the login.
 //
-// INTEGRATION BLOCKER: The monolith does two things atomically:
-//   1. Save the customer profile  (Intake — done here)
-//   2. Hash and store credentials (Identity — NOT done here, see TODO in Signup())
-//
-// A customer created through this endpoint cannot log in until
-// Identity integration is completed in Step 6.
+// Error handling after the profile is saved:
+//   Confirmed rejections (400/409/401) — Identity validates these before writing
+//     anything, so the profile is safe to delete. We delete it and return the error.
+//   Uncertain outcomes (timeout, network error, 5xx) — the profile is preserved
+//     because Identity may have already saved credentials. The 503 response tells
+//     the caller to retry later. Manual reconciliation may be needed.
 [ApiController]
 [Route("api/users")]
 public class CustomerIntakeController : ControllerBase
 {
     private readonly IntakeDbContext _db;
+    private readonly IdentityServiceClient _identity;
     private readonly string _taxIdPepper;
     private readonly ILogger<CustomerIntakeController> _logger;
 
     public CustomerIntakeController(
         IntakeDbContext db,
+        IdentityServiceClient identity,
         IConfiguration configuration,
         ILogger<CustomerIntakeController> logger)
     {
-        _db = db;
+        _db       = db;
+        _identity = identity;
         _taxIdPepper = configuration["TaxIdHashPepper"]
             ?? throw new InvalidOperationException(
                 "'TaxIdHashPepper' is not configured. " +
@@ -40,16 +44,13 @@ public class CustomerIntakeController : ControllerBase
     [HttpPost("signup")]
     public async Task<IActionResult> Signup([FromBody] CustomerSignupDto dto)
     {
-        // 1. Validate profile fields (Intake responsibility).
         var profileError = ProfileValidator.Validate(dto);
         if (profileError is not null)
             return BadRequest(profileError);
 
-        // 2. Verify credential fields are present — Intake does not process
-        //    them, but we must confirm they were sent so Identity can use them.
-        //    Silently accepting a request without credentials would create
-        //    an account the customer can never log into.
-        if (string.IsNullOrWhiteSpace(dto.username))
+        // Only check that credential fields were sent — Identity validates their content.
+        var username = dto.username.Trim();
+        if (username.Length == 0)
             return BadRequest("A username is required.");
         if (string.IsNullOrWhiteSpace(dto.password))
             return BadRequest("A password is required.");
@@ -58,22 +59,21 @@ public class CustomerIntakeController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.passwordRecoveryAnswer))
             return BadRequest("A password recovery answer is required.");
 
-        // 3. Compute TaxId hash (profile integrity — Intake owns this).
-        //    Algorithm matches the monolith exactly so hashes are identical.
+        // Check availability before saving. null means Identity was unreachable —
+        // proceed anyway and let the create call catch any conflict.
+        var available = await _identity.IsUsernameAvailable(username);
+        if (available == false)
+            return Conflict("That username or tax ID is already registered.");
+
         var taxIdNumber = dto.taxIdNumber.Trim();
         var taxIdHash   = TaxIdHasher.Hash(taxIdNumber, _taxIdPepper);
         var taxDigits   = new string(taxIdNumber.Where(char.IsLetterOrDigit).ToArray());
         var lastFour    = taxDigits.Length >= 4 ? taxDigits[^4..] : taxDigits.PadLeft(4, '0');
 
-        // 4. Build the profile row.
-        //    Credential columns (Username, PasswordHash, etc.) are left as
-        //    C# defaults. HasDefaultValue() in IntakeDbContext tells EF Core
-        //    to exclude them from the INSERT — the DB fills them with ''.
         var profile = new CustomerProfile
         {
             FirstName            = dto.firstName.Trim(),
-            MiddleName           = string.IsNullOrWhiteSpace(dto.middleName)
-                                       ? null : dto.middleName.Trim(),
+            MiddleName           = string.IsNullOrWhiteSpace(dto.middleName) ? null : dto.middleName.Trim(),
             LastName             = dto.lastName.Trim(),
             DateOfBirth          = dto.dateOfBirth.Date,
             Gender               = dto.gender.Trim(),
@@ -91,32 +91,80 @@ public class CustomerIntakeController : ControllerBase
         {
             _db.Customers.Add(profile);
             await _db.SaveChangesAsync();
-
-            // TODO (Step 6): Call Identity service here to set Username,
-            // PasswordHash, PasswordRecoveryQuestion, PasswordRecoveryAnswer
-            // for profile.CustomerId. If Identity rejects the call, delete the
-            // profile row and return Identity's error to the caller.
-            _logger.LogWarning(
-                "Profile created (CustomerId={CustomerId}) — credentials not " +
-                "yet set, awaiting Identity service integration (Step 6).",
-                profile.CustomerId);
-
-            // Monolith returns plain-text "created" with 200 OK.
-            // Angular user-signup.ts uses responseType:'text' and navigates
-            // on any 2xx — this is fully compatible.
-            return Ok("created");
         }
-        catch (DbUpdateException ex)
-            when (ex.InnerException is SqlException { Number: 2627 or 2601 })
+        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
         {
-            // Duplicate TaxIdHash or Username unique constraint.
-            // Monolith returns this exact message — Angular expects it.
             return Conflict("That username or tax ID is already registered.");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create customer profile.");
+            _logger.LogError(ex, "Failed to save customer profile.");
             return Problem("Could not create the account.");
+        }
+
+        // Call Identity to create the login.
+        HttpResponseMessage identityResponse;
+        try
+        {
+            identityResponse = await _identity.CreateCustomerAccount(
+                profile.CustomerId, username, dto.password,
+                dto.passwordRecoveryQuestion.Trim(), dto.passwordRecoveryAnswer.Trim());
+        }
+        catch (Exception ex)
+        {
+            if (ex is TaskCanceledException)
+                _logger.LogWarning("Identity timed out for CustomerId={Id}. Profile preserved.", profile.CustomerId);
+            else
+                _logger.LogError(ex, "Could not reach Identity for CustomerId={Id}. Profile preserved.", profile.CustomerId);
+
+            return StatusCode(503, "The account service is temporarily unavailable. Please try again shortly.");
+        }
+
+        if (identityResponse.IsSuccessStatusCode)
+            return Ok("created");
+
+        // Read the body before branching so it is available for logging.
+        var identityBody = await identityResponse.Content.ReadAsStringAsync();
+
+        switch (identityResponse.StatusCode)
+        {
+            // Confirmed rejections: Identity checks these before writing anything,
+            // so no credentials were saved and the profile is safe to delete.
+            case System.Net.HttpStatusCode.BadRequest:
+            case System.Net.HttpStatusCode.Conflict:
+            case System.Net.HttpStatusCode.Unauthorized:
+                _logger.LogWarning("Identity rejected CustomerId={Id}: {Status}",
+                    profile.CustomerId, (int)identityResponse.StatusCode);
+                await DeleteProfile(profile.CustomerId);
+                if (identityResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                    return StatusCode(500, "Internal configuration error: internal API key mismatch.");
+                return identityResponse.StatusCode == System.Net.HttpStatusCode.Conflict
+                    ? Conflict(identityBody) : BadRequest(identityBody);
+
+            default:
+                // 5xx or unexpected status — Identity's DB write may have succeeded or failed.
+                // Preserve the profile; do not attempt to delete it.
+                _logger.LogError("Identity returned {Status} for CustomerId={Id}. Profile preserved.",
+                    (int)identityResponse.StatusCode, profile.CustomerId);
+                return StatusCode(503, "The account service is temporarily unavailable. Please try again shortly.");
+        }
+    }
+
+    // Deletes the profile row on a confirmed Identity rejection (400/409/401).
+    // Errors are logged, not rethrown.
+    private async Task DeleteProfile(int customerId)
+    {
+        try
+        {
+            var row = await _db.Customers.FindAsync(customerId);
+            if (row is not null) { _db.Customers.Remove(row); await _db.SaveChangesAsync(); }
+        }
+        catch (Exception ex)
+        {
+            // Log the failure clearly — the profile was NOT rolled back.
+            _logger.LogError(ex,
+                "Rollback failed for CustomerId={Id}. Profile row still exists and needs manual cleanup.",
+                customerId);
         }
     }
 }
