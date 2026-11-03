@@ -20,6 +20,13 @@ builder.Services.AddHttpClient<IdentityServiceClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(10);
 });
 
+var riskBaseUrl = builder.Configuration["Risk:BaseUrl"] ?? "http://localhost:5291";
+builder.Services.AddHttpClient<RiskServiceClient>(client =>
+{
+    client.BaseAddress = new Uri(riskBaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(15);
+});
+
 // JWT validation using Identity's RS256 public key from its JWKS endpoint.
 // Role names are lowercase ("admin", "customer") as defined by Identity.
 // MapInboundClaims = false is required so "role" is not remapped by the JWT middleware.

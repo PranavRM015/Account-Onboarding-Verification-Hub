@@ -23,6 +23,7 @@ Supply these via `appsettings.Development.json` (local), `docker-compose.yml` (D
 | `Cors__AllowedOrigins__0` | Allowed frontend origin, e.g. `http://localhost:4200` |
 | `Identity__BaseUrl` | Base URL of the Identity service, e.g. `http://localhost:5290` |
 | `Internal__ApiKey` | Shared secret sent in `X-Internal-Key` header to Identity |
+| `Risk__BaseUrl` | Base URL of the Risk service, e.g. `http://localhost:5291` |
 
 ## API endpoints (implemented incrementally)
 
@@ -40,6 +41,11 @@ Supply these via `appsettings.Development.json` (local), `docker-compose.yml` (D
 
 - This service uses the **shared SQL Server database** as a temporary arrangement during migration.
   The `Customers` table is owned jointly with the Identity service for now.
-- Ticket creation currently calls into a shared `TicketIntake` helper that will be replaced
-  by HTTP calls to the Risk and Review services once those services are ready.
+- The two admin POST endpoints (`/inputForm` and `/pending-customers/{id}/submit`) currently
+  return 501. They validate inputs fully but do not write to the database. Full implementation
+  requires calling Risk (ready) and then Review (not yet available).
+- Risk screening (`POST /internal/analyze`) is called with the admin's forwarded Bearer JWT —
+  no separate internal key is used for Risk.
+- `TicketReadModel` in `IntakeDbContext` is temporary shared-DB code. It will be replaced
+  by an HTTP call to Review once Review owns a separate database.
 - See `services/intake/Data/IntakeDbContext.cs` for the EF Core configuration.
