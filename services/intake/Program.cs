@@ -101,6 +101,14 @@ var pepper = app.Configuration["TaxIdHashPepper"];
 if (string.IsNullOrWhiteSpace(pepper))
     throw new InvalidOperationException("'TaxIdHashPepper' is not configured.");
 
+// Off by default. Intake maps tables that already exist (the shared database), so it has no migrations.
+// Docker Compose turns this on so an empty local database gets the tables Intake uses.
+if (app.Configuration.GetValue("Database:EnsureCreatedOnStartup", false))
+{
+    using var scope = app.Services.CreateScope();
+    scope.ServiceProvider.GetRequiredService<IntakeDbContext>().Database.EnsureCreated();
+}
+
 // The key Identity expects in X-Internal-Key. Same rules as on the Identity side.
 var internalKey = app.Configuration["Internal:ApiKey"];
 if (string.IsNullOrWhiteSpace(internalKey) || internalKey.Length < 32)

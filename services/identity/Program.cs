@@ -93,6 +93,13 @@ public class Program
             throw new InvalidOperationException("'Internal:ApiKey' must not be the development value in production.");
         }
 
+        // Off by default. Docker Compose turns it on so a brand new database gets its tables; elsewhere run `dotnet ef database update`.
+        if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+        {
+            using var scope = app.Services.CreateScope();
+            scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.Migrate();
+        }
+
         CreateFirstAdmin(app);
 
         app.UseForwardedHeaders();

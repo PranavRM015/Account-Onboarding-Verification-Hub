@@ -1,0 +1,71 @@
+# Runs the three services and a SQL Server for local testing. Copy .env.example to .env and fill it in first.
+#   docker compose up --build
+# Identity  http://localhost:5290   Intake  http://localhost:5168   Risk  http://localhost:5291
+# Inside the network the services reach each other by name (http://identity:8080), never localhost.
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SQL_SA_PASSWORD:?Set SQL_SA_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  identity:
+    build: ./services/identity
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:5290:8080"
+    environment:
+      ConnectionStrings__IdentityConnection: Server=sqlserver;Database=VerificationHub_Identity;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      Jwt__PrivateKeyPem: ${JWT_PRIVATE_KEY_PEM:?Set JWT_PRIVATE_KEY_PEM in .env}
+      Internal__ApiKey: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+      BootstrapAdmin__Username: ${BOOTSTRAP_ADMIN_USERNAME:-}
+      BootstrapAdmin__Password: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BootstrapAdmin__AdminId: ${BOOTSTRAP_ADMIN_ID:-1}
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:4200}
+      Database__MigrateOnStartup: "true"
+
+  intake:
+    build: ./services/intake
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      identity:
+        condition: service_started
+      risk:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5168:8080"
+    environment:
+      ConnectionStrings__DefaultConnection: Server=sqlserver;Database=VerificationHub_Intake;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      TaxIdHashPepper: ${TAX_ID_PEPPER:?Set TAX_ID_PEPPER in .env}
+      Internal__ApiKey: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
+      Identity__BaseUrl: http://identity:8080
+      Risk__BaseUrl: http://risk:8080
+      Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:4200}
+      Database__EnsureCreatedOnStartup: "true"
+
+  risk:
+    build: ./services/risk
+    depends_on:
+      - identity
+    ports:
+      - "127.0.0.1:5291:8080"
+    environment:
+      Identity__JwksUrl: http://identity:8080/.well-known/jwks.json
+      Identity__RequireHttps: "false"
+
+volumes:
+  sqldata:

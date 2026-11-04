@@ -1,0 +1,13 @@
+bin/
+obj/
+.vs/
+.idea/
+*.user
+*.suo
+*.log
+appsettings.Local.json
+*.env
+# Holds the development-only signing key and internal API key. Production gets its own through app settings.
+appsettings.Development.json
+# One-off migration script; not part of the running service.
+database/

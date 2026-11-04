@@ -50,6 +50,10 @@ public class IntakeDbContext : DbContext
         {
             entity.ToTable("Admins");
 
+            // The same unique indexes the existing Admins table has (the SSN hash finds duplicates).
+            entity.HasIndex(a => a.Username).IsUnique().HasDatabaseName("AK_Admins_Username");
+            entity.HasIndex(a => a.SSNHash).IsUnique().HasDatabaseName("UX_Admins_SSNHash");
+
             // DB sets DateHired on INSERT; EF Core reads it back but never writes it.
             entity.Property(a => a.DateHired)
                 .HasDefaultValueSql("GETUTCDATE()")
