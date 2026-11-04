@@ -1,0 +1,17 @@
+# Combine with the team's root compose file; this does not change Intake or Identity.
+# docker compose -f docker-compose.yml -f services/review/compose.review.yml up --build
+services:
+  review:
+    build: ./services/review
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5292:8080"
+    environment:
+      ConnectionStrings__ReviewConnection: Server=sqlserver;Database=VerificationHub_Review;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      Identity__JwksUrl: http://identity:8080/.well-known/jwks.json
+      Identity__RequireHttps: "false"
+      Database__MigrateOnStartup: "true"
