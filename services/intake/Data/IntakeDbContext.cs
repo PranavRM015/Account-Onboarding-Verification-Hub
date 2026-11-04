@@ -9,10 +9,6 @@ public class IntakeDbContext : DbContext
 
     public DbSet<CustomerProfile> Customers { get; set; }
 
-    // Read-only view of the Tickets table. Intake queries this to check whether
-    // a customer has already been onboarded. Intake never inserts into Tickets.
-    public DbSet<TicketReadModel> Tickets { get; set; }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<CustomerProfile>(entity =>
@@ -28,7 +24,10 @@ public class IntakeDbContext : DbContext
             });
 
             entity.HasIndex(c => c.TaxIdHash).IsUnique().HasDatabaseName("UX_Customers_TaxIdHash");
-            entity.HasIndex(c => c.Username).IsUnique().HasDatabaseName("UX_Customers_Username");
+            // Filter excludes the empty-string placeholder that Intake stores until Identity writes the real username.
+            // Without this, every second customer insert would violate the unique constraint.
+            entity.HasIndex(c => c.Username).IsUnique().HasDatabaseName("UX_Customers_Username")
+                .HasFilter("[Username] <> ''");
 
             // DB sets CreatedAt on INSERT; EF Core reads it back but never writes it.
             entity.Property(c => c.CreatedAt)
@@ -44,10 +43,5 @@ public class IntakeDbContext : DbContext
             entity.Property(c => c.FailedLoginCount).HasDefaultValue(0);
         });
 
-        modelBuilder.Entity<TicketReadModel>(entity =>
-        {
-            entity.ToTable("Tickets");
-            entity.HasKey(t => t.TicketId);
-        });
     }
 }
