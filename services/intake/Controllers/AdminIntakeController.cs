@@ -1,8 +1,11 @@
 using Intake.Data;
 using Intake.DTOs;
+using Intake.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace Intake.Controllers;
 
@@ -13,11 +16,13 @@ namespace Intake.Controllers;
 public class AdminIntakeController : ControllerBase
 {
     private readonly IntakeDbContext _db;
+    private readonly RiskServiceClient _risk;
     private readonly ILogger<AdminIntakeController> _logger;
 
-    public AdminIntakeController(IntakeDbContext db, ILogger<AdminIntakeController> logger)
+    public AdminIntakeController(IntakeDbContext db, RiskServiceClient risk, ILogger<AdminIntakeController> logger)
     {
         _db = db;
+        _risk = risk;
         _logger = logger;
     }
 
@@ -37,17 +42,15 @@ public class AdminIntakeController : ControllerBase
         }
     }
 
-    // INTEGRATION BLOCKER: Risk and Review services not yet available.
-    // All validation runs, but no database writes are made until ticket creation
-    // can be completed atomically. Returns 501 until the Risk service API is confirmed.
+    // Validates the form and screens the customer with Risk. Nothing is saved: the profile, the login
+    // and the ticket are created together once Review can open the ticket, so a failed or half-finished
+    // request never leaves a customer behind.
+    // INTEGRATION BLOCKER: Review service not yet available. Returns 501 after Risk has answered.
     [HttpPost("api/admins/inputForm")]
-    public IActionResult InputForm([FromBody] InputFormDto dto)
+    public async Task<IActionResult> InputForm([FromBody] InputFormDto dto)
     {
         var assignedTo = User.Identity?.Name;
         if (string.IsNullOrEmpty(assignedTo)) return Unauthorized("You must be logged in.");
-
-        var taxIdNumber = dto.taxIdNumber?.Trim() ?? string.Empty;
-        if (taxIdNumber.Length == 0) return BadRequest("A tax ID number is required.");
 
         var accountType = dto.typeOfAccount?.Trim() ?? string.Empty;
         if (accountType != "Individual" && accountType != "Joint")
@@ -55,7 +58,7 @@ public class AdminIntakeController : ControllerBase
 
         var jointCustomerId = accountType == "Joint" ? dto.jointCustomerId : null;
         if (accountType == "Joint" &&
-            (jointCustomerId is null || !_db.Customers.Any(c => c.CustomerId == jointCustomerId)))
+            (jointCustomerId is null || !await _db.Customers.AnyAsync(c => c.CustomerId == jointCustomerId)))
             return BadRequest("The joint customer does not exist.");
 
         var username = dto.username?.Trim() ?? string.Empty;
@@ -64,10 +67,49 @@ public class AdminIntakeController : ControllerBase
         if (string.IsNullOrWhiteSpace(dto.passwordRecoveryQuestion)) return BadRequest("A password recovery question is required.");
         if (string.IsNullOrWhiteSpace(dto.passwordRecoveryAnswer)) return BadRequest("A password recovery answer is required.");
 
-        // Validation passed. No database writes have been made.
-        // Replace this return with profile creation + Identity call + Risk service call
-        // once the Risk/Review API contract is confirmed.
-        return StatusCode(501, "Ticket creation is pending Risk and Review service integration.");
+        // The same profile rules as self-signup, so Risk is never sent something it will reject.
+        var profile = new CustomerSignupDto
+        {
+            firstName            = dto.FirstName ?? string.Empty,
+            middleName           = string.IsNullOrWhiteSpace(dto.MiddleName) ? null : dto.MiddleName,
+            lastName             = dto.LastName ?? string.Empty,
+            dateOfBirth          = dto.DateOfBirth,
+            gender               = dto.Gender ?? string.Empty,
+            taxIdType            = dto.taxIdType ?? string.Empty,
+            taxIdNumber          = dto.taxIdNumber ?? string.Empty,
+            residentialAddress   = dto.residentialAddress ?? string.Empty,
+            countryOfResidence   = dto.countryOfResidence ?? string.Empty,
+            countryOfCitizenship = dto.countryOfCitizenship ?? string.Empty,
+            occupation           = dto.occupation ?? string.Empty,
+            employer             = dto.Employer ?? string.Empty,
+        };
+        var profileError = ProfileValidator.Validate(profile);
+        if (profileError is not null) return BadRequest(profileError);
+
+        var taxDigits = new string(profile.taxIdNumber.Where(char.IsLetterOrDigit).ToArray());
+        var (assessment, error) = await ScreenCustomer(new RiskAnalyzeRequest
+        {
+            FirstName            = profile.firstName.Trim(),
+            MiddleName           = profile.middleName?.Trim(),
+            LastName             = profile.lastName.Trim(),
+            TaxIdLastFourDigits  = taxDigits[^4..],
+            ResidentialAddress   = profile.residentialAddress.Trim(),
+            CountryOfResidence   = profile.countryOfResidence.Trim().ToUpperInvariant(),
+            CountryOfCitizenship = profile.countryOfCitizenship.Trim().ToUpperInvariant(),
+            Occupation           = profile.occupation.Trim(),
+            Employer             = profile.employer.Trim(),
+        });
+        if (error is not null) return error;
+
+        // INTEGRATION BLOCKER: replace this return with, in order: save the profile, create the login in
+        // Identity (IdentityServiceClient.CreateAccount, as CustomerIntakeController does), then hand the
+        // assessment to Review to open the ticket.
+        return StatusCode(501, new
+        {
+            message = "Risk analysis complete. Ticket creation is pending Review service integration.",
+            riskRating = assessment!.RiskRating,
+            flags = assessment.Flags,
+        });
     }
 
     // Lists self-registered customers who have no ticket yet, oldest first.
@@ -170,14 +212,31 @@ public class AdminIntakeController : ControllerBase
             if (await _db.Tickets.AnyAsync(t => t.CustomerId == customerId))
                 return Conflict("That customer has already been onboarded.");
 
-            // INTEGRATION BLOCKER: replace this return with an HTTP call to the Risk service
-            // to run checks and open the ticket. The row-lock (UPDLOCK, ROWLOCK) must also
-            // be reintroduced here inside a transaction when that call is wired up.
-            _logger.LogWarning("Submit for CustomerId={Id}: validated; ticket pending Risk/Review.", customerId);
+            var customer = await _db.Customers.AsNoTracking().FirstAsync(c => c.CustomerId == customerId);
+            var (assessment, error) = await ScreenCustomer(new RiskAnalyzeRequest
+            {
+                FirstName            = customer.FirstName.Trim(),
+                MiddleName           = customer.MiddleName?.Trim(),
+                LastName             = customer.LastName.Trim(),
+                TaxIdLastFourDigits  = customer.TaxIdLastFourDigits.Trim(),
+                ResidentialAddress   = customer.ResidentialAddress.Trim(),
+                CountryOfResidence   = customer.CountryOfResidence.Trim().ToUpperInvariant(),
+                CountryOfCitizenship = customer.CountryOfCitizenship.Trim().ToUpperInvariant(),
+                Occupation           = customer.Occupation.Trim(),
+                Employer             = customer.Employer.Trim(),
+            });
+            if (error is not null) return error;
+
+            // INTEGRATION BLOCKER: Review service not yet available. When it is, hand the assessment to
+            // Review here to open the ticket. The row-lock (UPDLOCK, ROWLOCK) must also be reintroduced
+            // around this call, inside a transaction, so two admins cannot open the same customer.
+            _logger.LogWarning("Submit for CustomerId={Id}: screened {Rating}; ticket pending Review.", customerId, assessment!.RiskRating);
             return StatusCode(501, new
             {
-                message = "Customer validated. Ticket creation is pending Risk and Review service integration.",
+                message = "Risk analysis complete. Ticket creation is pending Review service integration.",
                 customerId,
+                riskRating = assessment.RiskRating,
+                flags = assessment.Flags,
             });
         }
         catch (Exception ex)
@@ -187,4 +246,47 @@ public class AdminIntakeController : ControllerBase
         }
     }
 
+    // The admin's own token is what Risk checks, so it is passed on exactly as it arrived.
+    private string? BearerToken()
+    {
+        var header = Request.Headers.Authorization.ToString();
+        return header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? header["Bearer ".Length..].Trim() : null;
+    }
+
+    // Asks Risk to screen the customer. Returns the assessment, or the response to send back when screening
+    // did not succeed. A failed screening is never treated as Low risk, so every failure stops the request.
+    private async Task<(RiskAnalyzeResponse? Assessment, IActionResult? Error)> ScreenCustomer(RiskAnalyzeRequest request)
+    {
+        var token = BearerToken();
+        if (token is null) return (null, Unauthorized("You must be logged in."));
+
+        try
+        {
+            using var response = await _risk.AnalyzeAsync(request, token);
+            if (response.IsSuccessStatusCode)
+            {
+                var assessment = await response.Content.ReadFromJsonAsync<RiskAnalyzeResponse>();
+                if (assessment is not null && !string.IsNullOrEmpty(assessment.RiskRating)) return (assessment, null);
+                _logger.LogError("Risk returned an empty assessment.");
+                return (null, StatusCode(502, "The risk service returned an unusable answer. Please try again."));
+            }
+
+            _logger.LogWarning("Risk returned {Status}: {Body}", (int)response.StatusCode, await response.Content.ReadAsStringAsync());
+            IActionResult error = response.StatusCode switch
+            {
+                HttpStatusCode.BadRequest         => BadRequest("The risk service rejected the customer details."),
+                HttpStatusCode.Unauthorized       => Unauthorized("Your session is not valid for the risk service. Please log in again."),
+                HttpStatusCode.Forbidden          => StatusCode(403, "Only an admin can run a risk analysis."),
+                HttpStatusCode.ServiceUnavailable => StatusCode(503, "The risk service is temporarily unavailable. Please try again shortly."),
+                _                                 => StatusCode(502, "The risk service could not complete the analysis."),
+            };
+            return (null, error);
+        }
+        catch (Exception ex)
+        {
+            // Timeout, connection refused, or a body that was not the expected JSON.
+            _logger.LogError(ex, "Could not get an analysis from the Risk service.");
+            return (null, StatusCode(503, "The risk service is temporarily unavailable. Please try again shortly."));
+        }
+    }
 }
