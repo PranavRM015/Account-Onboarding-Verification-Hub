@@ -105,6 +105,9 @@ public class Program
 
         // The other services fetch this to check the tokens this service signs.
         app.MapGet("/.well-known/jwks.json", (JwtTokenService tokens) => Results.Json(tokens.PublicKeySet()));
+        // JwtBearer in the other services starts here (Authority = this service's URL) and follows jwks_uri to the keys.
+        app.MapGet("/.well-known/openid-configuration", (HttpContext http, JwtTokenService tokens) =>
+            Results.Json(tokens.DiscoveryDocument($"{http.Request.Scheme}://{http.Request.Host}")));
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
 
         app.Run();

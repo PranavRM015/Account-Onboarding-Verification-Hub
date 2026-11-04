@@ -80,6 +80,14 @@ namespace JwtTokens
             };
         }
 
+        // The standard discovery document: tells JwtBearer in the other services who the issuer is and where the keys are.
+        public object DiscoveryDocument(string baseUrl) => new
+        {
+            issuer = _issuer,
+            jwks_uri = $"{baseUrl.TrimEnd('/')}/.well-known/jwks.json",
+            id_token_signing_alg_values_supported = new[] { SecurityAlgorithms.RsaSha256 },
+        };
+
         // Every token gets a unique jti so that logout can revoke exactly this one.
         public (string Token, DateTime ExpiresAt) Issue(string username, string role, int accountId)
         {

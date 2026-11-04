@@ -9,6 +9,8 @@ public class IntakeDbContext : DbContext
 
     public DbSet<CustomerProfile> Customers { get; set; }
 
+    public DbSet<AdminProfile> Admins { get; set; }
+
     // Read-only view of the Tickets table. Intake queries this to check whether
     // a customer has already been onboarded. Intake never inserts into Tickets.
     public DbSet<TicketReadModel> Tickets { get; set; }
@@ -42,6 +44,16 @@ public class IntakeDbContext : DbContext
             entity.Property(c => c.PasswordRecoveryQuestion).HasDefaultValue(string.Empty);
             entity.Property(c => c.PasswordRecoveryAnswer).HasDefaultValue(string.Empty);
             entity.Property(c => c.FailedLoginCount).HasDefaultValue(0);
+        });
+
+        modelBuilder.Entity<AdminProfile>(entity =>
+        {
+            entity.ToTable("Admins");
+
+            // DB sets DateHired on INSERT; EF Core reads it back but never writes it.
+            entity.Property(a => a.DateHired)
+                .HasDefaultValueSql("GETUTCDATE()")
+                .ValueGeneratedOnAdd();
         });
 
         modelBuilder.Entity<TicketReadModel>(entity =>

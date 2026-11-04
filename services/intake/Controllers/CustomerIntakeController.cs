@@ -3,6 +3,7 @@ using Intake.DTOs;
 using Intake.Models;
 using Intake.Services;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
@@ -41,6 +42,7 @@ public class CustomerIntakeController : ControllerBase
         _logger = logger;
     }
 
+    [EnableRateLimiting("auth")]
     [HttpPost("signup")]
     public async Task<IActionResult> Signup([FromBody] CustomerSignupDto dto)
     {
@@ -61,7 +63,7 @@ public class CustomerIntakeController : ControllerBase
 
         // Check availability before saving. null means Identity was unreachable —
         // proceed anyway and let the create call catch any conflict.
-        var available = await _identity.IsUsernameAvailable(username);
+        var available = await _identity.IsUsernameAvailable("customer", username);
         if (available == false)
             return Conflict("That username or tax ID is already registered.");
 
@@ -70,44 +72,59 @@ public class CustomerIntakeController : ControllerBase
         var taxDigits   = new string(taxIdNumber.Where(char.IsLetterOrDigit).ToArray());
         var lastFour    = taxDigits.Length >= 4 ? taxDigits[^4..] : taxDigits.PadLeft(4, '0');
 
-        var profile = new CustomerProfile
+        // A retry after Identity timed out or failed finds the profile left behind by the
+        // first attempt. Resume it instead of hitting the tax ID index. The username must
+        // match so that knowing a tax ID alone is not enough to claim someone's profile.
+        var profile = await _db.Customers.FirstOrDefaultAsync(c => c.TaxIdHash == taxIdHash && c.Username == username);
+        var resumed = profile is not null;
+        if (profile is null)
         {
-            FirstName            = dto.firstName.Trim(),
-            MiddleName           = string.IsNullOrWhiteSpace(dto.middleName) ? null : dto.middleName.Trim(),
-            LastName             = dto.lastName.Trim(),
-            DateOfBirth          = dto.dateOfBirth.Date,
-            Gender               = dto.gender.Trim(),
-            TaxIdType            = dto.taxIdType.Trim().ToUpperInvariant(),
-            TaxIdHash            = taxIdHash,
-            TaxIdLastFourDigits  = lastFour,
-            ResidentialAddress   = dto.residentialAddress.Trim(),
-            CountryOfResidence   = dto.countryOfResidence.Trim().ToUpperInvariant(),
-            CountryOfCitizenship = dto.countryOfCitizenship.Trim().ToUpperInvariant(),
-            Occupation           = dto.occupation.Trim(),
-            Employer             = dto.employer.Trim(),
-        };
+            profile = new CustomerProfile
+            {
+                // The shared Customers table has a unique index on Username, so a blank value
+                // would collide on the second signup. Identity holds the real login.
+                Username             = username,
+                FirstName            = dto.firstName.Trim(),
+                MiddleName           = string.IsNullOrWhiteSpace(dto.middleName) ? null : dto.middleName.Trim(),
+                LastName             = dto.lastName.Trim(),
+                DateOfBirth          = dto.dateOfBirth.Date,
+                Gender               = dto.gender.Trim(),
+                TaxIdType            = dto.taxIdType.Trim().ToUpperInvariant(),
+                TaxIdHash            = taxIdHash,
+                TaxIdLastFourDigits  = lastFour,
+                ResidentialAddress   = dto.residentialAddress.Trim(),
+                CountryOfResidence   = dto.countryOfResidence.Trim().ToUpperInvariant(),
+                CountryOfCitizenship = dto.countryOfCitizenship.Trim().ToUpperInvariant(),
+                Occupation           = dto.occupation.Trim(),
+                Employer             = dto.employer.Trim(),
+            };
 
-        try
-        {
-            _db.Customers.Add(profile);
-            await _db.SaveChangesAsync();
+            try
+            {
+                _db.Customers.Add(profile);
+                await _db.SaveChangesAsync();
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
+            {
+                return Conflict("That username or tax ID is already registered.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to save customer profile.");
+                return Problem("Could not create the account.");
+            }
         }
-        catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
+        else
         {
-            return Conflict("That username or tax ID is already registered.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to save customer profile.");
-            return Problem("Could not create the account.");
+            _logger.LogWarning("Resuming incomplete signup for CustomerId={Id}.", profile.CustomerId);
         }
 
         // Call Identity to create the login.
         HttpResponseMessage identityResponse;
         try
         {
-            identityResponse = await _identity.CreateCustomerAccount(
-                profile.CustomerId, username, dto.password,
+            identityResponse = await _identity.CreateAccount(
+                "customer", profile.CustomerId, username, dto.password,
                 dto.passwordRecoveryQuestion.Trim(), dto.passwordRecoveryAnswer.Trim());
         }
         catch (Exception ex)
@@ -129,13 +146,14 @@ public class CustomerIntakeController : ControllerBase
         switch (identityResponse.StatusCode)
         {
             // Confirmed rejections: Identity checks these before writing anything,
-            // so no credentials were saved and the profile is safe to delete.
+            // so no credentials were saved. A profile created by this request is safe to
+            // delete; a resumed one is kept, because it may belong to a completed signup.
             case System.Net.HttpStatusCode.BadRequest:
             case System.Net.HttpStatusCode.Conflict:
             case System.Net.HttpStatusCode.Unauthorized:
                 _logger.LogWarning("Identity rejected CustomerId={Id}: {Status}",
                     profile.CustomerId, (int)identityResponse.StatusCode);
-                await DeleteProfile(profile.CustomerId);
+                if (!resumed) await DeleteProfile(profile.CustomerId);
                 if (identityResponse.StatusCode == System.Net.HttpStatusCode.Unauthorized)
                     return StatusCode(500, "Internal configuration error: internal API key mismatch.");
                 return identityResponse.StatusCode == System.Net.HttpStatusCode.Conflict

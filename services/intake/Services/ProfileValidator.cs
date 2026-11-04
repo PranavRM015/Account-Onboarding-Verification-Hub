@@ -49,11 +49,11 @@ public static class ProfileValidator
         if (dto.residentialAddress.Length > 200)
             return "Residential address cannot exceed 200 characters.";
 
-        if (string.IsNullOrWhiteSpace(dto.countryOfResidence) || dto.countryOfResidence.Length != 2)
-            return "Country of residence must be a 2-letter ISO country code.";
+        if (!IsCountryCode(dto.countryOfResidence))
+            return "Country of residence must be a valid two-letter country code.";
 
-        if (string.IsNullOrWhiteSpace(dto.countryOfCitizenship) || dto.countryOfCitizenship.Length != 2)
-            return "Country of citizenship must be a 2-letter ISO country code.";
+        if (!IsCountryCode(dto.countryOfCitizenship))
+            return "Country of citizenship must be a valid two-letter country code.";
 
         if (string.IsNullOrWhiteSpace(dto.occupation))
             return "Occupation is required.";
@@ -67,4 +67,40 @@ public static class ProfileValidator
 
         return null;
     }
+
+    // Returns null when valid, or an error message string.
+    public static string? Validate(AdminSignupDto dto)
+    {
+        if (string.IsNullOrWhiteSpace(dto.firstName))
+            return "First name is required.";
+        if (dto.firstName.Length > 50)
+            return "First name cannot exceed 50 characters.";
+
+        if (dto.middleName is not null && dto.middleName.Length > 50)
+            return "Middle name cannot exceed 50 characters.";
+
+        if (string.IsNullOrWhiteSpace(dto.lastName))
+            return "Last name is required.";
+        if (dto.lastName.Length > 50)
+            return "Last name cannot exceed 50 characters.";
+
+        if (dto.dateOfBirth > DateTime.UtcNow.Date.AddYears(-18))
+            return "Admin must be at least 18 years old.";
+
+        if (!ValidGenders.Contains(dto.gender))
+            return "Gender must be Male, Female, or Other.";
+
+        var ssn = new string((dto.ssn ?? string.Empty).Where(char.IsLetterOrDigit).ToArray());
+        if (ssn.Length != 9 || !ssn.All(char.IsDigit))
+            return "An SSN of exactly 9 digits is required.";
+
+        if (!IsCountryCode(dto.countryOfCitizenship))
+            return "Country of citizenship must be a valid two-letter country code.";
+
+        return null;
+    }
+
+    // Both signup controllers trim and upper-case the code before saving, so check it the same way.
+    private static bool IsCountryCode(string? code) =>
+        !string.IsNullOrWhiteSpace(code) && CountryCodes.All.Contains(code.Trim().ToUpperInvariant());
 }

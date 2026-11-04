@@ -1,5 +1,6 @@
 using Intake.Data;
 using Intake.Services;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -12,6 +13,18 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<IntakeDbContext>(options =>
     options.UseSqlServer(connectionString));
+
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? new[] { "http://localhost:4200" };
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("MyCorsPolicy", policy =>
+    {
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyHeader()
+            .AllowAnyMethod();
+    });
+});
 
 var identityBaseUrl = builder.Configuration["Identity:BaseUrl"] ?? "http://localhost:5290";
 builder.Services.AddHttpClient<IdentityServiceClient>(client =>
@@ -36,7 +49,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = identityBaseUrl;
-        options.MetadataAddress = $"{identityBaseUrl}/.well-known/jwks.json";
         options.RequireHttpsMetadata = false; // HTTP is fine inside the Docker network
         options.MapInboundClaims = false;
         options.TokenValidationParameters = new TokenValidationParameters
@@ -54,6 +66,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 builder.Services.AddAuthorization();
 
+// Signup is open to anyone, so it is limited per IP the same way Identity limits login.
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth", context =>
+    {
+        var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+        return RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = configuration.GetValue("RateLimiting:Auth:PermitLimit", 10),
+                Window = TimeSpan.FromSeconds(configuration.GetValue("RateLimiting:Auth:WindowSeconds", 60)),
+                QueueLimit = 0,
+            });
+    });
+});
+
 builder.Services.AddControllers();
 
 var app = builder.Build();
@@ -64,8 +94,17 @@ var pepper = app.Configuration["TaxIdHashPepper"];
 if (string.IsNullOrWhiteSpace(pepper))
     throw new InvalidOperationException("'TaxIdHashPepper' is not configured.");
 
+// The key Identity expects in X-Internal-Key. Same rules as on the Identity side.
+var internalKey = app.Configuration["Internal:ApiKey"];
+if (string.IsNullOrWhiteSpace(internalKey) || internalKey.Length < 32)
+    throw new InvalidOperationException("'Internal:ApiKey' must be set to a secret of at least 32 characters.");
+if (!app.Environment.IsDevelopment() && internalKey.StartsWith("dev-only"))
+    throw new InvalidOperationException("'Internal:ApiKey' must not be the development value in production.");
+
 app.UseForwardedHeaders();
 app.UseRouting();
+app.UseCors("MyCorsPolicy");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

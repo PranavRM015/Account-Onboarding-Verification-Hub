@@ -20,13 +20,13 @@ public class IdentityServiceClient
 
     // Courtesy check before saving a profile. Returns true = available,
     // false = taken, null = Identity unreachable (proceed and handle 409 from Create).
-    public async Task<bool?> IsUsernameAvailable(string username, CancellationToken ct = default)
+    public async Task<bool?> IsUsernameAvailable(string role, string username, CancellationToken ct = default)
     {
         try
         {
             var request = new HttpRequestMessage(
                 HttpMethod.Get,
-                $"/internal/accounts/username-available?role=customer&username={Uri.EscapeDataString(username)}");
+                $"/internal/accounts/username-available?role={Uri.EscapeDataString(role)}&username={Uri.EscapeDataString(username)}");
             request.Headers.Add("X-Internal-Key", _apiKey);
 
             var response = await _http.SendAsync(request, ct);
@@ -43,8 +43,9 @@ public class IdentityServiceClient
     }
 
     // Creates the login in Identity. Returns the raw response for the controller to handle.
-    public async Task<HttpResponseMessage> CreateCustomerAccount(
-        int customerId,
+    public async Task<HttpResponseMessage> CreateAccount(
+        string role,
+        int id,
         string username,
         string password,
         string passwordRecoveryQuestion,
@@ -55,8 +56,8 @@ public class IdentityServiceClient
         request.Headers.Add("X-Internal-Key", _apiKey);
         request.Content = JsonContent.Create(new
         {
-            role     = "customer",
-            id       = customerId,
+            role,
+            id,
             username,
             password,
             passwordRecoveryQuestion,
