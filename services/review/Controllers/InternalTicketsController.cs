@@ -36,6 +36,25 @@ namespace Review.Api.Controllers
                 .Select(v => new { v.Score, v.RiskCodes }).FirstOrDefault(),
         };
 
+        [HttpGet("onboarded-customer-ids")]
+        public IActionResult OnboardedCustomerIds()
+        {
+            try
+            {
+                var customerIds = _db.Tickets.AsNoTracking()
+                    .Select(t => t.CustomerId)
+                    .Distinct()
+                    .OrderBy(id => id)
+                    .ToArray();
+                return Ok(customerIds);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to list customer ids with existing tickets.");
+                return Problem("Could not retrieve onboarded customer ids.");
+            }
+        }
+
         [HttpGet("by-customer/{customerId:int}")]
         public IActionResult Find(int customerId)
         {

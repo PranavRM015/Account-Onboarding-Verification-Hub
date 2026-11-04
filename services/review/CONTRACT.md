@@ -116,6 +116,16 @@ The same `requestId`, same bound payload, and same admin produce `200` with the 
 
 Use a bounded HTTP timeout and forward the admin JWT unchanged. On a timeout, a ticket might already have committed: retry with the same request ID before compensating or deleting a profile. Analysis is done by Risk first; Review does not call Risk again. Stable submission identifiers and customer state/claim handling belong to Intake.
 
+### Filter Intake's pending customer list
+
+`GET /internal/tickets/onboarded-customer-ids` requires the same forwarded admin Bearer token. It returns `200` with a plain array of distinct primary customer IDs, sorted ascending:
+
+```json
+[17, 42, 58]
+```
+
+All existing ticket statuses are included, including Submitted, Review, Approved, and Rejected. This means "has a ticket," not "has been approved." Joint holder IDs are not added unless they also have their own ticket. With no tickets it returns `[]`. Intake should exclude these IDs from its pending list. Authentication errors are `401`/`403`; database/query failures return `500` problem details and must not be treated as an empty list. This lookup is for display filtering; the ticket-creation uniqueness checks still protect against concurrent submissions after the list was loaded.
+
 ## For the review UI
 
 These preserve the existing Angular URL paths and response field names:
