@@ -1,8 +1,37 @@
 {
-  "/api": {
-    "target": "http://localhost:5278",
+  "/api/admins/tickets": {
+    "target": "http://localhost:5292",
     "secure": false,
-    "changeOrigin": true,
-    "logLevel": "debug"
+    "changeOrigin": true
+  },
+  "/api/admins/signup": {
+    "target": "http://localhost:5168",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api/admins/inputForm": {
+    "target": "http://localhost:5168",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api/admins/pending-customers": {
+    "target": "http://localhost:5168",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api/users/signup": {
+    "target": "http://localhost:5168",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api/admins": {
+    "target": "http://localhost:5290",
+    "secure": false,
+    "changeOrigin": true
+  },
+  "/api/users": {
+    "target": "http://localhost:5290",
+    "secure": false,
+    "changeOrigin": true
   }
 }
