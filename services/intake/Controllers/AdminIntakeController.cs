@@ -152,11 +152,17 @@ public class AdminIntakeController : ControllerBase
         }
         catch (DbUpdateException ex) when (ex.InnerException is SqlException { Number: 2627 or 2601 })
         {
-            if (_db.Customers.Any(c => c.Username == username))
+            // Name the field that actually collided. Check the tax ID hash directly rather than
+            // assuming it, so a different unique-index violation is never reported as a tax ID clash.
+            var existingId = await _db.Customers.AsNoTracking()
+                .Where(c => c.TaxIdHash == taxIdHash).Select(c => (int?)c.CustomerId).FirstOrDefaultAsync();
+            if (existingId is not null)
+                return Conflict(new { message = "A customer with that tax ID already exists.", customerId = existingId });
+            if (await _db.Customers.AsNoTracking().AnyAsync(c => c.Username == username))
                 return Conflict(new { message = "That username is already taken." });
-            var existingId = _db.Customers
-                .Where(c => c.TaxIdHash == taxIdHash).Select(c => c.CustomerId).FirstOrDefault();
-            return Conflict(new { message = "A customer with that tax ID already exists.", customerId = existingId });
+
+            _logger.LogError(ex, "Unexpected unique-constraint violation saving input form profile.");
+            return Conflict(new { message = "This customer conflicts with an existing record. Please check the details and try again." });
         }
         catch (Exception ex)
         {
