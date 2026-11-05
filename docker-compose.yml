@@ -1,6 +1,6 @@
 # Runs the three services and a SQL Server for local testing. Copy .env.example to .env and fill it in first.
 #   docker compose up --build
-# Identity  http://localhost:5290   Intake  http://localhost:5168   Risk  http://localhost:5291
+# Identity  http://localhost:5290   Intake  http://localhost:5168   Risk  http://localhost:5291   Review  http://localhost:5292
 # Inside the network the services reach each other by name (http://identity:8080), never localhost.
 
 services:
@@ -46,6 +46,8 @@ services:
         condition: service_started
       risk:
         condition: service_started
+      review:
+        condition: service_started
     ports:
       - "127.0.0.1:5168:8080"
     environment:
@@ -54,6 +56,7 @@ services:
       Internal__ApiKey: ${INTERNAL_API_KEY:?Set INTERNAL_API_KEY in .env}
       Identity__BaseUrl: http://identity:8080
       Risk__BaseUrl: http://risk:8080
+      Review__BaseUrl: http://review:8080
       Cors__AllowedOrigins__0: ${CORS_ORIGIN:-http://localhost:4200}
       Database__EnsureCreatedOnStartup: "true"
 
@@ -66,6 +69,21 @@ services:
     environment:
       Identity__JwksUrl: http://identity:8080/.well-known/jwks.json
       Identity__RequireHttps: "false"
+
+  review:
+    build: ./services/review
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      identity:
+        condition: service_started
+    ports:
+      - "127.0.0.1:5292:8080"
+    environment:
+      ConnectionStrings__ReviewConnection: Server=sqlserver;Database=VerificationHub_Review;User Id=sa;Password=${SQL_SA_PASSWORD};TrustServerCertificate=True;
+      Identity__JwksUrl: http://identity:8080/.well-known/jwks.json
+      Identity__RequireHttps: "false"
+      Database__MigrateOnStartup: "true"
 
 volumes:
   sqldata:

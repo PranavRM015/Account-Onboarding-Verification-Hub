@@ -19,3 +19,8 @@ backend/wwwroot/
 publish/
 publish-out/
 publish.zip
+
+# Local-only Norton workaround
+services/review/norton.crt
+services/review/Dockerfile.local
+docker-compose.local.yml

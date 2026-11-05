@@ -9,3 +9,5 @@ appsettings.Local.json
 *.env
 # Holds the development-only pepper and internal API key. Production gets its own through app settings.
 appsettings.Development.json
+# One-off index fix script; not part of the running service.
+database/
