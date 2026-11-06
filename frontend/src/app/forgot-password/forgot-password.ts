@@ -17,6 +17,7 @@ export class ForgotPassword {
   private router = inject(Router);
 
   readonly role: 'admin' | 'user' = inject(ActivatedRoute).snapshot.paramMap.get('role') === 'user' ? 'user' : 'admin';
+  readonly roleLabel = this.role === 'admin' ? 'admin' : 'customer'; // what people read; the role id stays "user"
   private readonly api = this.role === 'admin' ? '/api/admins' : '/api/users';
 
   readonly step = signal<'username' | 'answer'>('username');

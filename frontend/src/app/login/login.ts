@@ -26,7 +26,8 @@ export class Login {
   }
 
   readonly role: 'admin' | 'user' = inject(ActivatedRoute).snapshot.data['role'] === 'user' ? 'user' : 'admin';
-  readonly audience = this.role === 'admin' ? 'an admin' : 'a user';
+  readonly audience = this.role === 'admin' ? 'an admin' : 'a customer';
+  readonly roleLabel = this.role === 'admin' ? 'admin' : 'customer'; // what people read; the role id stays "user"
   private readonly endpoint = this.role === 'admin' ? '/api/admins/login' : '/api/users/login';
 
   activeModal: 'username' | 'password' | null = null;

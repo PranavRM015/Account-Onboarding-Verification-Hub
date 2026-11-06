@@ -164,8 +164,9 @@ Done "all four images with tag '$ImageTag' present"
 Step '2. Container Apps environment'
 if ($EnvironmentName) { $script:EnvName = $EnvironmentName }
 else {
-  $envs = @(Invoke-Az containerapp env list --query '[].name' -o tsv)
-  if ($envs.Count -ne 1) { throw "Expected exactly 1 environment, found $($envs.Count). Pass -EnvironmentName." }
+  # Only this resource group's environments, so dev and prod can exist side by side in one subscription.
+  $envs = @(Invoke-Az containerapp env list -g $ResourceGroup --query '[].name' -o tsv)
+  if ($envs.Count -ne 1) { throw "Expected exactly 1 environment in $ResourceGroup, found $($envs.Count). Pass -EnvironmentName." }
   $script:EnvName = $envs[0]
 }
 Done "using environment '$($script:EnvName)'"

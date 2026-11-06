@@ -40,7 +40,7 @@ describe('Login for each role', () => {
     expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('admin');
 
     await harness.navigateByUrl('/user/login');
-    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('user');
+    expect(harness.routeNativeElement!.querySelector('h1')!.textContent).toContain('customer');
   });
 
   it('has a Forgot my password link that goes to the recovery screen for that role', async () => {

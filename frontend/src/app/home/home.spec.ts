@@ -11,7 +11,7 @@ describe('Home', () => {
     const href = (id: string) => root.querySelector(id)!.getAttribute('href');
 
     const buttons = Array.from(root.querySelectorAll('a, button'));
-    expect(buttons.map((b) => b.textContent!.trim())).toEqual(['User', 'Admin']);
+    expect(buttons.map((b) => b.textContent!.trim())).toEqual(['Customer', 'Admin']);
     expect(href('#userButton')).toBe('/user');
     expect(href('#adminButton')).toBe('/admin');
   });

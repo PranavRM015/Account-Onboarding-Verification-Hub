@@ -12,10 +12,10 @@ describe('RoleChoice', () => {
     return { title: root.querySelector('h1')!.textContent, href: (id: string) => root.querySelector(id)!.getAttribute('href') };
   };
 
-  it('offers the user login and signup after picking User', async () => {
+  it('offers the customer login and signup after picking Customer', async () => {
     const page = await open('/user');
 
-    expect(page.title).toContain('User');
+    expect(page.title).toContain('Customer');
     expect(page.href('#loginButton')).toBe('/user/login');
     expect(page.href('#signupButton')).toBe('/user/signup');
   });
