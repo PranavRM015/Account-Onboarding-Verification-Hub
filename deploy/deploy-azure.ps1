@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Idempotent: safe to re-run. Every step checks first and skips what already exists.
-    1. Checks the four images exist in the registry.
+    1. Checks the five images (identity, risk, review, intake, web) exist in the registry.
     2. Finds the (single) Container Apps environment.
     3. Creates one user-assigned managed identity and grants it AcrPull on the registry.
     4. SQL access: opens the firewall for this machine, then for each database checks whether the
@@ -48,6 +48,7 @@ $AppNames = @{
   risk     = 'ca-hub-risk'
   review   = 'ca-hub-review'
   intake   = 'ca-hub-intake'
+  web      = 'ca-hub-web'
 }
 $AcrServer = "$AcrName.azurecr.io"
 $SqlFqdn   = "$SqlServer.database.windows.net"
@@ -107,13 +108,13 @@ function Invoke-SqlScalar($db, $token, $sql) {
 }
 
 # Create when missing, otherwise update. $Secrets / $EnvVars are arrays of 'name=value' strings.
-function Deploy-App($name, $image, $ingress, $secrets, $envVars) {
+function Deploy-App($name, $image, $ingress, $secrets, $envVars, $port = '8080') {
   $exists = (Invoke-Az containerapp list -g $ResourceGroup --query "[?name=='$name'].name" -o tsv)
   if (-not $exists) {
     Info "creating $name ..."
     $a = @('containerapp','create','-n',$name,'-g',$ResourceGroup,'--environment',$script:EnvName,
            '--image',"$AcrServer/hub/${image}:$ImageTag",
-           '--target-port','8080','--ingress',$ingress,
+           '--target-port',$port,'--ingress',$ingress,
            '--min-replicas','1','--max-replicas','1',
            '--user-assigned',$script:IdentityId,
            '--registry-server',$AcrServer,'--registry-identity',$script:IdentityId)
@@ -152,7 +153,7 @@ if ($internalKey.Length -lt 32) { throw 'INTERNAL_API_KEY must be at least 32 ch
 # ---------- 1. images -------------------------------------------------------
 Step '1. Images in the registry'
 $repos = @(Invoke-Az acr repository list --name $AcrName -o tsv)
-foreach ($r in 'hub/identity','hub/risk','hub/review','hub/intake') {
+foreach ($r in 'hub/identity','hub/risk','hub/review','hub/intake','hub/web') {
   if ($repos -notcontains $r) { throw "Image repository '$r' not found in $AcrName. Push it first." }
   $tags = @(Invoke-Az acr repository show-tags --name $AcrName --repository $r -o tsv)
   if ($tags -notcontains $ImageTag) { throw "Tag '$ImageTag' not found on $r." }
@@ -284,9 +285,18 @@ Deploy-App $AppNames.intake 'intake' 'external' @(
     'Database__EnsureCreatedOnStartup=true'
   )
 
+Step '5e. Web (Angular + nginx, routes /api to the services above)'
+$apiOrigin = { param($n) "https://$(Invoke-Az containerapp show -n $n -g $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv)" }
+Deploy-App $AppNames.web 'web' 'external' @() @(
+    "IDENTITY_UPSTREAM=$(& $apiOrigin $AppNames.identity)",
+    "INTAKE_UPSTREAM=$(& $apiOrigin $AppNames.intake)",
+    "REVIEW_UPSTREAM=$(& $apiOrigin $AppNames.review)",
+    'DNS_RESOLVER=168.63.129.16'
+  ) '80'
+
 # ---------- 6. summary ------------------------------------------------------
 Step '6. Result'
-foreach ($k in 'identity','risk','review','intake') {
+foreach ($k in 'identity','risk','review','intake','web') {
   $n = $AppNames[$k]
   $fqdn = (Invoke-Az containerapp show -n $n -g $ResourceGroup --query properties.configuration.ingress.fqdn -o tsv)
   $state = (Invoke-Az containerapp show -n $n -g $ResourceGroup --query properties.runningStatus.state -o tsv 2>$null)
