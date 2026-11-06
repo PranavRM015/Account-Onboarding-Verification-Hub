@@ -9,15 +9,14 @@
 
   Created, in this order (each step checks first and skips what already exists, so a re-run is safe):
     1. Resource group                   rg-verificationhub-prod-cus-01
-    2. Log Analytics workspace          workspace-rgverificationhubprodcus01
     3. Container registry               acrverificationhubprod
     4. SQL server (Entra-only auth)     srv-verificationhub-prod-cus
     5. Three serverless databases       db-verificationhub-{identity,intake,review}-prod-cus
-    6. Container Apps environment       cae-verificationhub-prod-cus
+    6. (no new Container Apps environment: the subscription allows one, so prod apps join dev's)
     7. The five images, copied (not rebuilt) from the dev registry into the prod registry, tagged "prod"
     8. .env.prod with NEW secrets for prod (signing key, internal API key, tax ID pepper) - never printed
   Then deploy-azure.ps1 creates the managed identity (id-hub-prod), database users, the Review procedures and the
-  five Container Apps (ca-hub-identity, ca-hub-risk, ca-hub-review, ca-hub-intake, ca-hub-web).
+  five Container Apps (ca-hub-*$AppSuffix: identity, risk, review, intake, web).
 
   Prerequisites: Azure CLI logged in (az login) with rights to create resources and role assignments in the
   subscription; openssl (Git for Windows ships one) to generate the signing key.
@@ -32,14 +31,16 @@ param(
   [string]$SubscriptionId   = '968d8a5a-affc-47df-a5a5-719b5bda4d5b',   # same subscription as dev
   [string]$Location         = 'centralus',
   [string]$ResourceGroup    = 'rg-verificationhub-prod-cus-01',
-  [string]$Workspace        = 'workspace-rgverificationhubprodcus01',
   [string]$AcrName          = 'acrverificationhubprod',
   [string]$AcrSku           = 'Basic',
   [string]$SqlServer        = 'srv-verificationhub-prod-cus',
   [string]$IdentityDb       = 'db-verificationhub-identity-prod-cus',
   [string]$IntakeDb         = 'db-verificationhub-intake-prod-cus',
   [string]$ReviewDb         = 'db-verificationhub-review-prod-cus',
-  [string]$EnvironmentName  = 'cae-verificationhub-prod-cus',
+  # The subscription allows only ONE Container Apps environment, so prod's apps join dev's. Everything else is separate.
+  [string]$EnvironmentName  = 'cae-verificationhub-dev-cus',
+  [string]$EnvironmentResourceGroup = 'rg-verificationhub-dev-cus-01',
+  [string]$AppSuffix        = '-prod-cus',                               # marker added to the app names (ca-hub-web-prod-cus ...)
   [string]$ManagedIdentity  = 'id-hub-prod',
   [string]$DevAcrName       = 'aovhacrprm',                              # where the tested images come from
   [string]$DevImageTag      = 'dev',
@@ -93,8 +94,12 @@ if ($acrExists) { Skip "registry $AcrName already exists" } elseif ($acrFree) { 
 $sqlExists = Test-Az sql server show -g $ResourceGroup -n $SqlServer
 if ($sqlExists) { Skip "SQL server $SqlServer already exists" }
 else {
-  $body = (@{ name = $SqlServer; type = 'Microsoft.Sql/servers' } | ConvertTo-Json -Compress)
-  $check = Invoke-Az rest --method post --uri "https://management.azure.com/subscriptions/$SubscriptionId/providers/Microsoft.Sql/checkNameAvailability?api-version=2021-11-01" --body $body -o json | ConvertFrom-Json
+  # The body goes through a file: PowerShell 5.1 strips the double quotes from a JSON string passed to a native exe.
+  $bodyFile = New-TemporaryFile
+  try {
+    [IO.File]::WriteAllText($bodyFile.FullName, (@{ name = $SqlServer; type = 'Microsoft.Sql/servers' } | ConvertTo-Json -Compress))
+    $check = Invoke-Az rest --method post --uri "https://management.azure.com/subscriptions/$SubscriptionId/providers/Microsoft.Sql/checkNameAvailability?api-version=2021-11-01" --body "@$($bodyFile.FullName)" -o json | ConvertFrom-Json
+  } finally { Remove-Item $bodyFile.FullName -ErrorAction SilentlyContinue }
   if (-not $check.available) { throw "The SQL server name '$SqlServer' is not available ($($check.message)). Pass a different -SqlServer." }
   Info "SQL server name $SqlServer is free"
 }
@@ -110,14 +115,13 @@ Info "all five source images (hub/*:$DevImageTag) are in $DevAcrName"
 if (-not $Apply) {
   Step 'Plan (nothing created)'
   Plan "1. resource group        $ResourceGroup ($Location)"
-  Plan "2. Log Analytics         $Workspace"
   Plan "3. container registry    $AcrName ($AcrSku)"
   Plan "4. SQL server            $SqlServer (Entra-only sign-in, admin $($me.upn))"
   foreach ($d in $Dbs) { Plan "5. database              $d (serverless GP_S_Gen5_1, 0.5-1 vCore, auto-pause off, $BackupRedundancy backup)" }
-  Plan "6. Container Apps env    $EnvironmentName"
+  Plan "6. Container Apps env    $EnvironmentName (shared with dev, no new one created)"
   foreach ($i in $Images) { Plan "7. image copy             hub/${i}:$DevImageTag ($DevAcrName) -> hub/${i}:$ProdImageTag ($AcrName)" }
   Plan "8. secrets file          $EnvFile (new signing key, internal API key, tax ID pepper)"
-  Plan "then deploy-azure.ps1:   $ManagedIdentity, database users, Review procedures, ca-hub-identity / risk / review / intake / web"
+  Plan "then deploy-azure.ps1:   $ManagedIdentity, database users, Review procedures, ca-hub-{identity,risk,review,intake,web}$AppSuffix"
   Write-Host "`nRe-run with -Apply to create it." -ForegroundColor Yellow
   return
 }
@@ -126,11 +130,6 @@ if (-not $Apply) {
 Step "1. Resource group $ResourceGroup"
 if ((Invoke-Az group exists --name $ResourceGroup) -eq 'true') { Skip 'already exists' }
 else { Invoke-Az group create --name $ResourceGroup --location $Location --tags @tags | Out-Null; Done 'created' }
-
-# ---------- 2. Log Analytics workspace -------------------------------------
-Step "2. Log Analytics workspace $Workspace"
-if (Test-Az monitor log-analytics workspace show -g $ResourceGroup -n $Workspace) { Skip 'already exists' }
-else { Invoke-Az monitor log-analytics workspace create -g $ResourceGroup -n $Workspace -l $Location --tags @tags | Out-Null; Done 'created' }
 
 # ---------- 3. container registry ------------------------------------------
 Step "3. Container registry $AcrName"
@@ -157,15 +156,10 @@ foreach ($d in $Dbs) {
   Done "$d created (serverless, auto-pause off)"
 }
 
-# ---------- 6. Container Apps environment ----------------------------------
-Step "6. Container Apps environment $EnvironmentName"
-if (Test-Az containerapp env show -g $ResourceGroup -n $EnvironmentName) { Skip 'already exists' }
-else {
-  $wsId  = Invoke-Az monitor log-analytics workspace show -g $ResourceGroup -n $Workspace --query customerId -o tsv
-  $wsKey = Invoke-Az monitor log-analytics workspace get-shared-keys -g $ResourceGroup -n $Workspace --query primarySharedKey -o tsv
-  Invoke-Az containerapp env create -g $ResourceGroup -n $EnvironmentName -l $Location --logs-workspace-id $wsId --logs-workspace-key $wsKey --tags @tags | Out-Null
-  Done 'created'
-}
+# ---------- 6. Container Apps environment (shared with dev) ----------------
+Step "6. Container Apps environment $EnvironmentName (shared with dev)"
+if (-not (Test-Az containerapp env show -g $EnvironmentResourceGroup -n $EnvironmentName)) { throw "Environment $EnvironmentName not found in $EnvironmentResourceGroup." }
+Skip 'the subscription is limited to one environment; prod apps run in dev''s, under their own names'
 
 # ---------- 7. promote the tested images -----------------------------------
 Step "7. Copy images from $DevAcrName to $AcrName (no rebuild)"
@@ -203,7 +197,7 @@ else {
 $deployScript = Join-Path $PSScriptRoot 'deploy-azure.ps1'
 $deployArgs = @{
   SubscriptionId = $SubscriptionId; ResourceGroup = $ResourceGroup; Location = $Location; AcrName = $AcrName
-  ImageTag = $ProdImageTag; EnvironmentName = $EnvironmentName; SqlServer = $SqlServer
+  ImageTag = $ProdImageTag; EnvironmentName = $EnvironmentName; EnvironmentResourceGroup = $EnvironmentResourceGroup; AppSuffix = $AppSuffix; SqlServer = $SqlServer
   IdentityDb = $IdentityDb; IntakeDb = $IntakeDb; ReviewDb = $ReviewDb; ManagedIdentity = $ManagedIdentity; EnvFile = $EnvFile
 }
 if ($Deploy) {
@@ -212,6 +206,6 @@ if ($Deploy) {
 } else {
   Step 'Infrastructure is ready. Create the apps with:'
   Write-Host "   .\deploy\deploy-azure.ps1 -SubscriptionId $SubscriptionId -ResourceGroup $ResourceGroup -AcrName $AcrName -ImageTag $ProdImageTag ``"
-  Write-Host "       -EnvironmentName $EnvironmentName -SqlServer $SqlServer -IdentityDb $IdentityDb -IntakeDb $IntakeDb -ReviewDb $ReviewDb ``"
+  Write-Host "       -EnvironmentName $EnvironmentName -EnvironmentResourceGroup $EnvironmentResourceGroup -AppSuffix $AppSuffix -SqlServer $SqlServer -IdentityDb $IdentityDb -IntakeDb $IntakeDb -ReviewDb $ReviewDb ``"
   Write-Host "       -ManagedIdentity $ManagedIdentity -EnvFile $EnvFile"
 }

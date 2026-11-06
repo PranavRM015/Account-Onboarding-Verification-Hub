@@ -28,12 +28,14 @@ param(
   [string]$AcrName           = 'aovhacrprm',
   [string]$ImageTag          = 'dev',
   [string]$EnvironmentName   = '',            # leave empty to auto-detect the single environment
+  [string]$EnvironmentResourceGroup = '',     # set when the environment lives in another resource group (prod shares dev's)
   [string]$SqlServer         = 'srv-verificationhub-dev-cus',   # short name, no .database.windows.net
   [string]$SqlResourceGroup  = '',            # defaults to $ResourceGroup
   [string]$IdentityDb        = 'db-verificationhub-identity-dev-cus',
   [string]$IntakeDb          = 'db-verificationhub-intake-dev-cus',
   [string]$ReviewDb          = 'db-verificationhub-review-dev-cus',
   [string]$ManagedIdentity   = 'id-hub-dev',
+  [string]$AppSuffix         = '',            # appended to every Container App name, e.g. '-prod-eus2'
   [string]$CorsOrigin        = 'http://localhost:4200',
   [string]$EnvFile           = (Join-Path $PSScriptRoot '..\.env'),
   [switch]$RotateInternalKey,
@@ -44,11 +46,11 @@ $ErrorActionPreference = 'Stop'
 if (-not $SqlResourceGroup) { $SqlResourceGroup = $ResourceGroup }
 
 $AppNames = @{
-  identity = 'ca-hub-identity'
-  risk     = 'ca-hub-risk'
-  review   = 'ca-hub-review'
-  intake   = 'ca-hub-intake'
-  web      = 'ca-hub-web'
+  identity = "ca-hub-identity$AppSuffix"
+  risk     = "ca-hub-risk$AppSuffix"
+  review   = "ca-hub-review$AppSuffix"
+  intake   = "ca-hub-intake$AppSuffix"
+  web      = "ca-hub-web$AppSuffix"
 }
 $AcrServer = "$AcrName.azurecr.io"
 $SqlFqdn   = "$SqlServer.database.windows.net"
@@ -61,8 +63,14 @@ function Done($msg)  { Write-Host "   [ok]   $msg" -ForegroundColor Green }
 
 # Runs az, throws on a non-zero exit code, returns stdout. Never echoes the arguments (they can hold secrets).
 function Invoke-Az {
-  $out = & az @args --only-show-errors
-  if ($LASTEXITCODE -ne 0) { throw "az $($args[0]) $($args[1]) failed (exit $LASTEXITCODE)." }
+  # Windows PowerShell 5.1 turns any stderr text (progress, warnings) into a terminating error under 'Stop'; the exit code is what counts.
+  $old = $ErrorActionPreference; $ErrorActionPreference = 'Continue'
+  $errFile = [IO.Path]::GetTempFileName()
+  try {
+    $out = & az @args --only-show-errors 2>$errFile
+    $code = $LASTEXITCODE; $ErrorActionPreference = $old
+    if ($code -ne 0) { throw "az $($args[0]) $($args[1]) failed (exit $code). $((Get-Content $errFile -Raw))" }
+  } finally { $ErrorActionPreference = $old; Remove-Item $errFile -ErrorAction SilentlyContinue }
   $out
 }
 
@@ -162,14 +170,15 @@ Done "all four images with tag '$ImageTag' present"
 
 # ---------- 2. environment --------------------------------------------------
 Step '2. Container Apps environment'
-if ($EnvironmentName) { $script:EnvName = $EnvironmentName }
+if ($EnvironmentName -and $EnvironmentResourceGroup) { $script:EnvName = (Invoke-Az containerapp env show -g $EnvironmentResourceGroup -n $EnvironmentName --query id -o tsv) }  # full resource id, so it works across resource groups
+elseif ($EnvironmentName) { $script:EnvName = $EnvironmentName }
 else {
   # Only this resource group's environments, so dev and prod can exist side by side in one subscription.
   $envs = @(Invoke-Az containerapp env list -g $ResourceGroup --query '[].name' -o tsv)
   if ($envs.Count -ne 1) { throw "Expected exactly 1 environment in $ResourceGroup, found $($envs.Count). Pass -EnvironmentName." }
   $script:EnvName = $envs[0]
 }
-Done "using environment '$($script:EnvName)'"
+Done "using environment '$(Split-Path $script:EnvName -Leaf)'"
 
 # ---------- 3. managed identity + AcrPull ----------------------------------
 Step '3. Managed identity and registry pull access'

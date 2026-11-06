@@ -2,11 +2,11 @@ name: CI/CD
 
 # The integrated pipeline. It calls each service's own pipeline, and only if all five pass does it run the
 # cross-service integration tests against the whole docker-compose stack. Only after those pass, and only on main,
-# does it deploy to the dev environment in Azure.
+# does it deploy to dev in Azure, and only once dev is up does it promote the very same images to production.
 #
 #   identity ─┐
 #   risk     ─┤
-#   review   ─┼─> integration ─> deploy (main only)
+#   review   ─┼─> integration ─> deploy-dev ─> deploy-prod   (the last two: main only)
 #   intake   ─┤
 #   frontend ─┘
 on:
@@ -104,7 +104,7 @@ jobs:
         if: always()
         run: $COMPOSE down -v
 
-  deploy:
+  deploy-dev:
     name: Deploy to dev (Azure Container Apps)
     needs: integration
     # Off until the Azure side is set up: add the repository variable DEPLOY_ENABLED=true and the three AZURE_* variables.
@@ -159,3 +159,49 @@ jobs:
             sleep 10
           done
           echo "Dev did not come up after the rollout"; exit 1
+
+  deploy-prod:
+    name: Promote to prod (Azure Container Apps)
+    needs: deploy-dev
+    # Same switch as dev. Add a required reviewer to the "prod" GitHub environment to make this a manual approval gate.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment: prod
+    permissions:
+      contents: read
+      id-token: write
+    env:
+      DEV_ACR_NAME: ${{ vars.ACR_NAME || 'aovhacrprm' }}
+      PROD_ACR_NAME: ${{ vars.PROD_ACR_NAME || 'acrverificationhubprod' }}
+      RESOURCE_GROUP: ${{ vars.PROD_AZURE_RESOURCE_GROUP || 'rg-verificationhub-prod-cus-01' }}
+      APP_SUFFIX: ${{ vars.PROD_APP_SUFFIX || '-prod-cus' }}
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      # Nothing is rebuilt: the images that just ran in dev (tagged with this commit) are copied into the prod registry.
+      - name: Copy this commit's images from the dev registry to the prod registry
+        run: |
+          dev_id="$(az acr show --name "$DEV_ACR_NAME" --query id -o tsv)"
+          for svc in identity risk review intake web; do
+            az acr import --name "$PROD_ACR_NAME" --registry "$dev_id"               --source "hub/$svc:${GITHUB_SHA}" --image "hub/$svc:${GITHUB_SHA}" --image "hub/$svc:prod" --force --only-show-errors
+          done
+
+      # Secrets, database access and the app definitions were created once by deploy/create-prod-infra.ps1.
+      - name: Roll out the new images
+        run: |
+          for svc in identity risk review intake web; do
+            az containerapp update -n "ca-hub-$svc$APP_SUFFIX" -g "$RESOURCE_GROUP"               --image "$PROD_ACR_NAME.azurecr.io/hub/$svc:${GITHUB_SHA}" --only-show-errors > /dev/null
+          done
+
+      - name: Smoke test
+        run: |
+          fqdn() { az containerapp show -n "ca-hub-$1$APP_SUFFIX" -g "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv; }
+          for i in $(seq 1 30); do
+            curl -fsS "https://$(fqdn identity)/.well-known/jwks.json" > /dev/null               && curl -fsS "https://$(fqdn web)/" > /dev/null && exit 0
+            sleep 10
+          done
+          echo "Prod did not come up after the rollout"; exit 1

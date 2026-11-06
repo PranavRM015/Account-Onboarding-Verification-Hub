@@ -388,13 +388,13 @@ frontend ─┘
 |---|---|---|
 | `identity.yml`, `risk.yml`, `review.yml`, `intake.yml` | Pull requests that touch that service or its tests, manual start, and when called by `ci-cd.yml` | Runs the service's unit tests, then builds its Docker image (not pushed) to catch Dockerfile breakage. |
 | `frontend.yml` | Pull requests that touch `frontend/`, manual start, and when called by `ci-cd.yml` | Runs the Angular unit tests headless, makes a production build, and builds the Docker image (not pushed). |
-| `ci-cd.yml` | Pushes to `main`, pull requests into `main`, and manual start | Calls the five workflows above in parallel. Then, only if all five pass, runs the integration tests. Then, only on `main`, deploys. |
+| `ci-cd.yml` | Pushes to `main`, pull requests into `main`, and manual start | Calls the five workflows above in parallel. Then, only if all five pass, runs the integration tests. Then, only on `main`, deploys to dev and, once dev is healthy, promotes the same images to prod. |
 
-**The gate is real.** The five service workflows are called as reusable workflows (`workflow_call`), so `integration` needs all five, and `deploy` needs `integration`. A failure anywhere stops everything after it. On a pull request both the service's own workflow and the integrated one run, which means the unit tests run twice. In the repository's branch protection rules, set the integrated pipeline's jobs (and the per-service ones) as required checks so nothing merges around the gate.
+**The gate is real.** The five service workflows are called as reusable workflows (`workflow_call`), so `integration` needs all five, `deploy-dev` needs `integration`, and `deploy-prod` needs `deploy-dev`. A failure anywhere stops everything after it. On a pull request both the service's own workflow and the integrated one run, which means the unit tests run twice. In the repository's branch protection rules, set the integrated pipeline's jobs (and the per-service ones) as required checks so nothing merges around the gate.
 
 **Integration job.** It creates a throwaway `.env` with freshly generated secrets (SQL password, internal API key, tax ID pepper and an RSA signing key; all masked in logs and gone when the job ends), starts the full `docker-compose` stack with the CI override, waits until every service reports healthy, installs the Review procedures into the Review database, runs `tests/Integration.Tests`, prints the service logs if anything failed, and always tears the stack down. It needs no repository secrets.
 
-**Deploy job.** It only runs for a push (or manual run) on `main` and is **off until you turn it on**: set the repository variable `DEPLOY_ENABLED` to `true`. It also needs a GitHub environment named `dev` and these repository variables, which let the job sign in to Azure with OpenID Connect so no password or key is stored in GitHub:
+**Deploy jobs.** `deploy-dev` only runs for a push (or manual run) on `main` and is **off until you turn it on**: set the repository variable `DEPLOY_ENABLED` to `true`. It also needs a GitHub environment named `dev` and these repository variables, which let the job sign in to Azure with OpenID Connect so no password or key is stored in GitHub:
 
 | Variable | Meaning |
 |---|---|
@@ -404,7 +404,9 @@ frontend ─┘
 
 The job builds all five images, tags each with the commit SHA and with `dev`, pushes them, points each Container App at the commit-tagged image with `az containerapp update`, and then smoke-tests that Identity's key endpoint and the website answer. The SHA tag means every revision is traceable to a commit and always pulls a new image.
 
-The pipeline only **releases new images**. It does not create secrets, database users, the SQL procedures or the apps themselves. That one-time setup is `deploy/deploy-azure.ps1`, described below.
+**Prod promotion (`deploy-prod`).** Runs after `deploy-dev` succeeds, under a GitHub environment named `prod` (add a required reviewer to it to make the release a manual approval). It rebuilds nothing: `az acr import` copies the commit-tagged images that just ran in dev into the prod registry (tagging them `prod` too), `az containerapp update` points `ca-hub-<service>-prod-cus` at them, and a smoke test checks Identity's key endpoint and the website. It uses the same `AZURE_*` variables, so that app registration also needs a federated credential for the `prod` environment, AcrPull on the dev registry, and AcrPush plus Container Apps rights on the prod registry and resource group. Optional variables: `PROD_ACR_NAME` (default `acrverificationhubprod`), `PROD_AZURE_RESOURCE_GROUP` (default `rg-verificationhub-prod-cus-01`) and `PROD_APP_SUFFIX` (default `-prod-cus`).
+
+The pipeline only **releases new images**. It does not create secrets, database users, the SQL procedures or the apps themselves. That one-time setup is `deploy/deploy-azure.ps1` for dev and `deploy/create-prod-infra.ps1` for prod, described below.
 
 ---
 
@@ -481,3 +483,12 @@ az containerapp update -n ca-hub-intake -g rg-verificationhub-dev-cus-01 --image
 - **A database will not connect from your machine.** `sqlcmd` waits only 8 seconds to log in, so use `-l 120`, and note that `-G` on its own tries Windows integrated sign-in. The sign-in code in `deploy-azure.ps1` (an `az` access token on a `System.Data.SqlClient` connection with a 120-second timeout) works reliably.
 - **`az` or `docker build` fails with a certificate error.** Behind a network that inspects HTTPS traffic, add that network's root certificate. `Dockerfile.local` and `docker-compose.local.yml` (both ignored by git) do this for the image builds.
 - **The Review log shows SQL error 229.** The service's database user lacks `EXECUTE` on `pr_expireReviewTickets`. Run `deploy-azure.ps1` without `-SkipSql`, which grants it.
+
+
+---
+
+## Production environment
+
+`deploy/create-prod-infra.ps1` builds production: its own resource group `rg-verificationhub-prod-cus-01`, container registry `acrverificationhubprod`, SQL server `srv-verificationhub-prod-cus` with three databases, a managed identity `id-hub-prod`, and **new prod-only secrets** in `.env.prod` (git-ignored; back it up). It copies the tested images from the dev registry and then calls `deploy-azure.ps1`. Run it with no flags to see the plan, `-Apply` to create, `-Apply -Deploy` to create and deploy the apps.
+
+The subscription allows **one Container Apps environment in total**, so prod's five apps run inside dev's environment (`cae-verificationhub-dev-cus`) under their own names with a `-prod-cus` suffix: `ca-hub-identity-prod-cus`, `ca-hub-risk-prod-cus`, `ca-hub-review-prod-cus`, `ca-hub-intake-prod-cus`, `ca-hub-web-prod-cus`. Everything else (registry, SQL, identity, secrets, signing key) is separate from dev. If the quota is raised, pass `-EnvironmentName` and `-EnvironmentResourceGroup` for a dedicated environment. Prod keeps the real auth rate limit (10 requests a minute per IP); only the CI stack raises it.
