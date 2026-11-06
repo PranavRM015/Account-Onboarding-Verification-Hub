@@ -24,3 +24,6 @@ publish.zip
 services/review/norton.crt
 services/review/Dockerfile.local
 docker-compose.local.yml
+
+# Database exports contain real data
+*.bacpac

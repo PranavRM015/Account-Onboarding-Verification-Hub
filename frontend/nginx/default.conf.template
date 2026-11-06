@@ -4,22 +4,30 @@ server {
     root /usr/share/nginx/html;
     index index.html;
 
-    # Keep API failures separate from Angular's client-side route fallback.
-    location = /api {
-        proxy_pass http://${API_UPSTREAM};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # Container Apps resolves app names through its own DNS; re-resolve instead of caching at startup.
+    resolver ${DNS_RESOLVER} valid=10s ipv6=off;
+
+    # Same routing as frontend/proxy.conf.json. Upstreams are full origins (scheme://host), set per environment.
+    # Variables in proxy_pass keep the original request URI untouched.
+    # Review: tickets
+    location /api/admins/tickets {
+        set $upstream ${REVIEW_UPSTREAM};
+        proxy_pass $upstream;
+        include /etc/nginx/proxy_params.conf;
     }
 
-    location /api/ {
-        # No trailing slash: the backend needs the original /api/... path.
-        proxy_pass http://${API_UPSTREAM};
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
+    # Intake: signup, input form, pending customers
+    location ~ ^/api/(admins/(signup|inputForm|pending-customers)|users/signup) {
+        set $upstream ${INTAKE_UPSTREAM};
+        proxy_pass $upstream;
+        include /etc/nginx/proxy_params.conf;
+    }
+
+    # Identity: everything else under /api
+    location /api {
+        set $upstream ${IDENTITY_UPSTREAM};
+        proxy_pass $upstream;
+        include /etc/nginx/proxy_params.conf;
     }
 
     location = /index.html {
