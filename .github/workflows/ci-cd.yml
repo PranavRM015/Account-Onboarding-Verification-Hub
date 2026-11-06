@@ -1,5 +1,14 @@
 name: CI/CD
 
+# The integrated pipeline. It calls each service's own pipeline, and only if all five pass does it run the
+# cross-service integration tests against the whole docker-compose stack. Only after those pass, and only on main,
+# does it deploy to the dev environment in Azure.
+#
+#   identity ─┐
+#   risk     ─┤
+#   review   ─┼─> integration ─> deploy (main only)
+#   intake   ─┤
+#   frontend ─┘
 on:
   push:
     branches: [main]
@@ -7,13 +16,32 @@ on:
     branches: [main]
   workflow_dispatch:
 
-env:
-  SA_PASSWORD: ${{ secrets.CI_SA_PASSWORD }}
-  TEST_CONNECTION: Server=localhost,1433;Database=VerificationHubDB;User Id=sa;Password=${{ secrets.CI_SA_PASSWORD }};TrustServerCertificate=True;
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  test:
+  identity:
+    uses: ./.github/workflows/identity.yml
+  risk:
+    uses: ./.github/workflows/risk.yml
+  review:
+    uses: ./.github/workflows/review.yml
+  intake:
+    uses: ./.github/workflows/intake.yml
+  frontend:
+    uses: ./.github/workflows/frontend.yml
+
+  integration:
+    name: Integration tests (docker-compose stack)
+    needs: [identity, risk, review, intake, frontend]
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      COMPOSE: docker compose -f docker-compose.yml -f docker-compose.ci.yml
     steps:
       - uses: actions/checkout@v4
 
@@ -21,79 +49,113 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Start SQL Server
+      # Throwaway secrets for a stack that lives for the length of this job. Nothing here is stored anywhere.
+      - name: Create the stack's .env
         run: |
-          docker run -d --name sql -e ACCEPT_EULA=Y -e MSSQL_SA_PASSWORD="$SA_PASSWORD" -p 1433:1433 mcr.microsoft.com/mssql/server:2022-latest
-          for i in $(seq 1 40); do
-            docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$SA_PASSWORD" -Q "SELECT 1" > /dev/null 2>&1 && exit 0
+          SQL_SA_PASSWORD="Ci1!$(openssl rand -hex 12)"
+          INTERNAL_API_KEY="$(openssl rand -hex 32)"
+          TAX_ID_PEPPER="$(openssl rand -hex 24)"
+          JWT_PRIVATE_KEY_PEM="$(openssl genrsa 2048 2>/dev/null | openssl pkcs8 -topk8 -nocrypt | awk 'NF {printf "%s\\n", $0}')"
+          echo "::add-mask::$SQL_SA_PASSWORD"
+          echo "::add-mask::$INTERNAL_API_KEY"
+          echo "::add-mask::$TAX_ID_PEPPER"
+          {
+            echo "SQL_SA_PASSWORD=$SQL_SA_PASSWORD"
+            echo "INTERNAL_API_KEY=$INTERNAL_API_KEY"
+            echo "TAX_ID_PEPPER=$TAX_ID_PEPPER"
+            echo "JWT_PRIVATE_KEY_PEM=\"$JWT_PRIVATE_KEY_PEM\""
+          } > .env
+          # The tests read these two.
+          echo "INTERNAL_API_KEY=$INTERNAL_API_KEY" >> "$GITHUB_ENV"
+          echo "REVIEW_DB_CONNECTION=Server=127.0.0.1,1433;Database=VerificationHub_Review;User Id=sa;Password=$SQL_SA_PASSWORD;TrustServerCertificate=True;Encrypt=False" >> "$GITHUB_ENV"
+
+      - name: Build and start the stack
+        run: $COMPOSE up -d --build
+
+      - name: Wait until every service answers
+        run: |
+          for url in 5290 5168 5291 5292; do
+            for i in $(seq 1 60); do
+              curl -fsS "http://127.0.0.1:$url/health" > /dev/null && break
+              [ "$i" = 60 ] && { echo "Port $url never became healthy"; $COMPOSE logs; exit 1; }
+              sleep 3
+            done
+          done
+          for i in $(seq 1 60); do
+            curl -fsS http://127.0.0.1:5292/health/ready > /dev/null && exit 0
             sleep 3
           done
-          docker logs sql
-          exit 1
+          echo "Review never became ready"; $COMPOSE logs review; exit 1
 
-      - name: Create the database schema and procedures
+      # Review's migrations have run by now, so its tables exist. The ticket-expiry procedures are SQL, deployed separately.
+      - name: Install the Review database procedures
         run: |
-          dotnet tool install --global dotnet-ef --version "10.0.*"
-          dotnet restore backend/backend.Api.csproj
-          ASPNETCORE_ENVIRONMENT=Development dotnet ef migrations script --idempotent --project backend -o schema.sql
-          sqlcmd() { docker exec sql /opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$SA_PASSWORD" -b -I "$@"; }
-          sqlcmd -Q "CREATE DATABASE VerificationHubDB"
-          docker cp schema.sql sql:/tmp/schema.sql
-          docker cp database/Procedures.sql sql:/tmp/Procedures.sql
-          sqlcmd -d VerificationHubDB -i /tmp/schema.sql
-          sqlcmd -d VerificationHubDB -i /tmp/Procedures.sql
+          docker cp services/review/database/Procedures.sql "$($COMPOSE ps -q sqlserver)":/tmp/Procedures.sql
+          $COMPOSE exec -T sqlserver sh -c '/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -b -I -d VerificationHub_Review -i /tmp/Procedures.sql'
 
-      - name: Backend tests
-        run: dotnet test backend.Tests --configuration Release
-        env:
-          ConnectionStrings__DefaultConnection: ${{ env.TEST_CONNECTION }}
+      - name: Integration tests
+        run: dotnet test tests/Integration.Tests --configuration Release
 
-      - name: Install frontend packages
-        run: npm ci
-        working-directory: frontend
+      - name: Service logs (on failure)
+        if: failure()
+        run: $COMPOSE logs --no-color --tail 200
 
-      - name: Frontend tests
-        run: npx ng test --watch=false --browsers=ChromeHeadlessCI
-        working-directory: frontend
+      - name: Stop the stack
+        if: always()
+        run: $COMPOSE down -v
 
   deploy:
-    needs: test
-    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
+    name: Deploy to dev (Azure Container Apps)
+    needs: integration
+    # Off until the Azure side is set up: add the repository variable DEPLOY_ENABLED=true and the three AZURE_* variables.
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
     runs-on: ubuntu-latest
-    environment: production
+    environment: dev
+    permissions:
+      contents: read
+      id-token: write # lets the job sign in to Azure with OpenID Connect, so no stored secret is needed
+    env:
+      ACR_NAME: ${{ vars.ACR_NAME || 'aovhacrprm' }}
+      RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP || 'rg-verificationhub-dev-cus-01' }}
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - uses: azure/login@v2
         with:
-          dotnet-version: 10.0.x
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+      - name: Sign in to the registry
+        run: az acr login --name "$ACR_NAME"
 
-      - name: Build the Angular app into the API
+      # Each image is tagged with the commit (what actually runs) and with "dev" (what deploy-azure.ps1 expects to find).
+      - name: Build and push the five images
         run: |
-          npm ci
-          npx ng build
-          mkdir -p ../backend/wwwroot
-          cp -r dist/frontend/browser/. ../backend/wwwroot/
-        working-directory: frontend
+          for svc in identity risk review intake; do
+            image="$ACR_NAME.azurecr.io/hub/$svc"
+            docker build -t "$image:${GITHUB_SHA}" -t "$image:dev" "services/$svc"
+            docker push "$image:${GITHUB_SHA}"; docker push "$image:dev"
+          done
+          image="$ACR_NAME.azurecr.io/hub/web"
+          docker build -t "$image:${GITHUB_SHA}" -t "$image:dev" frontend
+          docker push "$image:${GITHUB_SHA}"; docker push "$image:dev"
 
-      - name: Publish the API
-        run: dotnet publish backend/backend.Api.csproj --configuration Release --output publish-out
+      # Secrets, database access and the app definitions were created once by deploy/deploy-azure.ps1.
+      # From here on a release only points each app at the new image.
+      - name: Roll out the new images
+        run: |
+          for svc in identity risk review intake web; do
+            az containerapp update -n "ca-hub-$svc" -g "$RESOURCE_GROUP" \
+              --image "$ACR_NAME.azurecr.io/hub/$svc:${GITHUB_SHA}" --only-show-errors > /dev/null
+          done
 
-      - name: Deploy to Azure App Service
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: ${{ vars.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: publish-out
+      - name: Smoke test
+        run: |
+          fqdn() { az containerapp show -n "ca-hub-$1" -g "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv; }
+          for i in $(seq 1 30); do
+            curl -fsS "https://$(fqdn identity)/.well-known/jwks.json" > /dev/null \
+              && curl -fsS "https://$(fqdn web)/" > /dev/null && exit 0
+            sleep 10
+          done
+          echo "Dev did not come up after the rollout"; exit 1

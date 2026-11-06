@@ -15,6 +15,7 @@ namespace Review.Api
             builder.Services.AddDbContext<ReviewDbContext>(options => options.UseSqlServer(connection));
             builder.Services.AddIdentityAuthentication(builder.Configuration);
             builder.Services.AddControllers();
+            builder.Services.AddHubSwagger("Review API");
             builder.Services.AddProblemDetails();
             builder.Services.AddHostedService<TicketExpiryService>();
             var app = builder.Build();
@@ -25,6 +26,7 @@ namespace Review.Api
                 await db.Database.MigrateAsync();
             }
             app.UseExceptionHandler();
+            app.UseHubSwagger();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapControllers();

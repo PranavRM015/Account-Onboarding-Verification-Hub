@@ -79,6 +79,7 @@ public class Program
         });
 
         builder.Services.AddControllers();
+        builder.Services.AddHubSwagger("Identity API", internalKey: true);
         var app = builder.Build();
 
         JwtTokenService.SigningKey(app.Configuration); // fails at startup if the private key is missing or too weak
@@ -104,6 +105,7 @@ public class Program
 
         app.UseForwardedHeaders();
         app.UseRouting();
+        app.UseHubSwagger();
         app.UseCors("MyCorsPolicy");
         app.UseRateLimiter();
         app.UseAuthentication();

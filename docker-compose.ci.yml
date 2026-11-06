@@ -1,0 +1,13 @@
+# Layered on top of docker-compose.yml for the integration tests (locally and in GitHub Actions):
+#   docker compose -f docker-compose.yml -f docker-compose.ci.yml up -d --build
+# The tests sign up and log in dozens of accounts from one address, which the per-IP "auth" rate limit
+# (10 per minute) would refuse. Everything else is exactly what runs in production.
+
+services:
+  identity:
+    environment:
+      RateLimiting__Auth__PermitLimit: "100000"
+
+  intake:
+    environment:
+      RateLimiting__Auth__PermitLimit: "100000"

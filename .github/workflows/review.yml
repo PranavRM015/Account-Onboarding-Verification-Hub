@@ -1,0 +1,42 @@
+name: Review service
+
+# Runs on its own for pull requests that touch this service, and is called by ci-cd.yml (workflow_call) so the
+# integrated pipeline cannot pass unless this one does.
+on:
+  pull_request:
+    paths:
+      - 'services/review/**'
+      - 'tests/Review.Tests/**'
+      - '.github/workflows/review.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: review-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Unit tests
+        run: dotnet test tests/Review.Tests --configuration Release
+
+  image:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image (not pushed)
+        run: docker build services/review

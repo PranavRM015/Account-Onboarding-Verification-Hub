@@ -229,6 +229,17 @@ else {
       if ($in -eq 0) { Invoke-SqlScalar $db $token "alter role [$role] add member [$ManagedIdentity];" | Out-Null; Done "$db : added to $role" }
     }
   }
+
+  # Review's 60-day ticket expiry runs as stored procedures. Push them into the Review database (CREATE OR ALTER, so
+  # re-runs are safe; the file is split on its GO lines because each CREATE must be alone in its batch). The built-in
+  # roles above do not include EXECUTE, so grant it too - without it the expiry job fails with SQL error 229.
+  Info "$ReviewDb : applying services/review/database/Procedures.sql"
+  $proceduresFile = Join-Path $PSScriptRoot '..\services\review\database\Procedures.sql'
+  if (-not (Test-Path $proceduresFile)) { throw "Not found: $proceduresFile" }
+  $batches = [regex]::Split((Get-Content $proceduresFile -Raw), '(?im)^\s*GO\s*$') | Where-Object { $_.Trim() }
+  foreach ($batch in $batches) { Invoke-SqlScalar $ReviewDb $token $batch | Out-Null }
+  Invoke-SqlScalar $ReviewDb $token "grant execute on object::dbo.pr_expireReviewTickets to [$ManagedIdentity];" | Out-Null
+  Done "$ReviewDb : procedures created/updated, EXECUTE granted on dbo.pr_expireReviewTickets"
 }
 
 # ---------- 5. the four apps ------------------------------------------------

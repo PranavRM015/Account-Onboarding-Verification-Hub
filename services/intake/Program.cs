@@ -1,3 +1,4 @@
+using Intake.Authentication;
 using Intake.Data;
 using Intake.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -53,37 +54,21 @@ builder.Services.AddHttpClient<ReviewServiceClient>(client =>
     client.Timeout = TimeSpan.FromSeconds(15);
 });
 
-// JWT validation using Identity's RS256 public key from its JWKS endpoint.
-// Role names are lowercase ("admin", "customer") as defined by Identity.
-// MapInboundClaims = false is required so "role" is not remapped by the JWT middleware.
+// JWT validation. Intake fetches Identity's public signing keys straight from its JWKS endpoint, exactly as Risk and
+// Review do. It used to go through Identity's OpenID discovery document, which builds the key address from the incoming
+// request; behind Azure's internal ingress that address was unreachable, so every authenticated call hung for the
+// 60-second backchannel timeout and then failed with 401.
 //
-// INTEGRATION NOTE: Intake fetches Identity's public key at startup via JWKS.
-// If Identity is not running, Intake will still start but tokens will be rejected
-// because the signing key cannot be fetched. Set Identity:BaseUrl to point to the
-// running Identity service instance.
+// The address defaults to Identity:BaseUrl + /.well-known/jwks.json, so no extra setting is needed. Issuer and audience
+// come from appsettings.json (Identity:Issuer / Identity:Audience).
 //
 // LIMITATION: Intake cannot check the RevokedTokens table (that lives in Identity's DB).
 // A logged-out token will still pass validation here until it expires naturally.
 // This is acceptable for a P3 project and is the same trade-off described in CONTRACT.md.
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.Authority = identityBaseUrl;
-        options.RequireHttpsMetadata = false; // HTTP is fine inside the Docker network
-        options.MapInboundClaims = false;
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            ValidateIssuer = true,
-            ValidIssuer = "AccountVerificationOnboardingHub",
-            ValidateAudience = true,
-            ValidAudience = "AccountVerificationOnboardingHub",
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30),
-            NameClaimType = "name",
-            RoleClaimType = "role",
-        };
-    });
+var jwksUrl = builder.Configuration["Identity:JwksUrl"] ?? identityBaseUrl.TrimEnd('/') + "/.well-known/jwks.json";
+builder.Configuration["Identity:JwksUrl"] = jwksUrl;
+builder.Configuration["Identity:RequireHttps"] ??= jwksUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase).ToString();
+builder.Services.AddIdentityAuthentication(builder.Configuration);
 builder.Services.AddAuthorization();
 
 // Signup is open to anyone, so it is limited per IP the same way Identity limits login.
@@ -105,6 +90,7 @@ builder.Services.AddRateLimiter(options =>
 });
 
 builder.Services.AddControllers();
+builder.Services.AddHubSwagger("Intake API");
 
 var app = builder.Build();
 
@@ -130,6 +116,7 @@ if (app.Configuration.GetValue("Database:EnsureCreatedOnStartup", false))
 
 app.UseForwardedHeaders();
 app.UseRouting();
+app.UseHubSwagger();
 app.UseCors("MyCorsPolicy");
 app.UseRateLimiter();
 app.UseAuthentication();

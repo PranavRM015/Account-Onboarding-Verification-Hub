@@ -27,3 +27,6 @@ docker-compose.local.yml
 
 # Database exports contain real data
 *.bacpac
+
+services/intake/norton.crt
+services/intake/Dockerfile.local

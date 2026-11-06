@@ -9,6 +9,7 @@ namespace Risk.Api
         {
             var builder = WebApplication.CreateBuilder(args);
             builder.Services.AddControllers();
+            builder.Services.AddHubSwagger("Risk API");
             builder.Services.AddProblemDetails();
             builder.Services.AddIdentityAuthentication(builder.Configuration);
             builder.Services.AddSingleton<RiskAnalyzer>();
@@ -17,6 +18,7 @@ namespace Risk.Api
             // Load the screening files before accepting requests. Missing files must not yield a clean assessment.
             app.Services.GetRequiredService<RiskAnalyzer>();
             app.UseExceptionHandler();
+            app.UseHubSwagger();
             app.UseAuthentication();
             app.UseAuthorization();
             app.MapGet("/health", () => Results.Ok(new { status = "ok" }));

@@ -1,0 +1,42 @@
+name: Risk service
+
+# Runs on its own for pull requests that touch this service, and is called by ci-cd.yml (workflow_call) so the
+# integrated pipeline cannot pass unless this one does.
+on:
+  pull_request:
+    paths:
+      - 'services/risk/**'
+      - 'tests/Risk.Tests/**'
+      - '.github/workflows/risk.yml'
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: risk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Unit tests
+        run: dotnet test tests/Risk.Tests --configuration Release
+
+  image:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the image (not pushed)
+        run: docker build services/risk
